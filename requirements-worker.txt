@@ -1,0 +1,4 @@
+requests
+torch>=2.2
+numpy
+pydantic==2.*

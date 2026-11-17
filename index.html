@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>atharva.ai — Distributed Fragment Training Across GPU, TPU &amp; RAM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-0: #05070d;
+      --bg-1: #0b0f1c;
+      --bg-2: #11182b;
+      --surface: rgba(17, 24, 43, 0.72);
+      --border: rgba(148, 163, 184, 0.14);
+      --border-glow: rgba(0, 240, 255, 0.38);
+      --text-0: #f8fafc;
+      --text-1: #94a3b8;
+      --text-2: #64748b;
+      --cyan: #00f0ff;
+      --violet: #8b5cf6;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --rose: #f43f5e;
+      --font-display: 'Space Grotesk', system-ui, sans-serif;
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg-0);
+      color: var(--text-0);
+      font-family: var(--font-sans);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 18% 12%, rgba(0, 240, 255, 0.09), transparent 38%),
+        radial-gradient(circle at 82% 22%, rgba(139, 92, 246, 0.11), transparent 42%),
+        radial-gradient(circle at 50% 85%, rgba(16, 185, 129, 0.07), transparent 45%),
+        var(--bg-0);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* Subtle animated grid backdrop */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(ellipse at 50% 30%, black 35%, transparent 85%);
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Navbar */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      background: rgba(5, 7, 13, 0.78);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-0);
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-orb {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--cyan), var(--violet));
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 24px rgba(0, 240, 255, 0.45);
+      position: relative;
+    }
+
+    .brand-orb::after {
+      content: "";
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--bg-0);
+      border-radius: 4px;
+      transform: rotate(45deg);
+      animation: spinPulse 6s infinite linear;
+    }
+
+    @keyframes spinPulse {
+      0% { transform: rotate(45deg) scale(1); }
+      50% { transform: rotate(225deg) scale(0.82); }
+      100% { transform: rotate(405deg) scale(1); }
+    }
+
+    .version-pill {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(0, 240, 255, 0.1);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      color: var(--text-1);
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--cyan);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.22s ease;
+      border: 1px solid transparent;
+      font-family: var(--font-sans);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan), #00a8ff);
+      color: #030712;
+      box-shadow: 0 0 28px rgba(0, 240, 255, 0.32);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 38px rgba(0, 240, 255, 0.55);
+    }
+
+    .btn-secondary {
+      background: rgba(17, 24, 43, 0.85);
+      color: var(--text-0);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 64px 0 48px;
+    }
+
+    .hero-top {
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto 40px;
+    }
+
+    .status-banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: rgba(17, 24, 43, 0.9);
+      border: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-1);
+      margin-bottom: 24px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 12px var(--emerald);
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.45); opacity: 0.55; }
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2.4rem, 5vw, 4.1rem);
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+
+    .grad-text {
+      background: linear-gradient(90deg, #ffffff 0%, var(--cyan) 48%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--text-1);
+      max-width: 740px;
+      margin: 0 auto 30px;
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    /* Motion Graphic Stage */
+    .motion-stage-card {
+      background: linear-gradient(180deg, rgba(17, 24, 43, 0.85), rgba(8, 12, 24, 0.95));
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow:
+        0 25px 70px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(0, 240, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stage-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .stage-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--text-1);
+    }
+
+    .legend-group {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--text-1);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+
+    .stage-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chip-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-1);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+
+    .chip-btn:hover, .chip-btn.active {
+      border-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0, 240, 255, 0.1);
+    }
+
+    #topologyCanvas {
+      width: 100%;
+      height: 510px;
+      display: block;
+      border-radius: 12px;
+      background: radial-gradient(circle at 50% 50%, rgba(17, 24, 43, 0.7), rgba(5, 7, 13, 0.95));
+    }
+
+    .stage-metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .metric-tile {
+      background: rgba(5, 7, 13, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+    }
+
+    .metric-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-value {
+      font-family: var(--font-display);
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--text-0);
+      margin-top: 2px;
+    }
+
+    .metric-sub {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--emerald);
+    }
+
+    /* Section Headers */
+    section {
+      padding: 84px 0;
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 52px;
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--cyan);
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: clamp(1.85rem, 3.2vw, 2.65rem);
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+    }
+
+    /* Tensor Sparsification Motion Visualizer */
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 960px) {
+      .split-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      backdrop-filter: blur(12px);
+    }
+
+    .tensor-viz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    #tensorCanvas {
+      width: 100%;
+      height: 300px;
+      display: block;
+      border-radius: 12px;
+      background: #060913;
+      border: 1px solid var(--border);
+    }
+
+    .wire-packet {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+    }
+
+    .packet-seg {
+      padding: 8px 6px;
+      border-radius: 8px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+    }
+
+    .packet-seg strong {
+      display: block;
+      color: var(--cyan);
+      font-size: 0.76rem;
+    }
+
+    /* Step Cards */
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .step-item {
+      padding: 18px 20px;
+      border-radius: 14px;
+      background: rgba(5, 7, 13, 0.6);
+      border: 1px solid var(--border);
+      transition: all 0.25s;
+      cursor: pointer;
+    }
+
+    .step-item.active, .step-item:hover {
+      border-color: var(--cyan);
+      background: rgba(0, 240, 255, 0.05);
+      transform: translateX(4px);
+    }
+
+    .step-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+
+    .step-title {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(0, 240, 255, 0.14);
+      color: var(--cyan);
+    }
+
+    .step-code {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: var(--violet);
+    }
+
+    .step-desc {
+      font-size: 0.9rem;
+      color: var(--text-1);
+    }
+
+    /* Bandwidth Calculator */
+    .calc-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .slider-group label {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      margin-bottom: 8px;
+      color: var(--text-1);
+    }
+
+    .slider-group label span {
+      color: var(--cyan);
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--cyan);
+      cursor: pointer;
+    }
+
+    .bar-compare {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      justify-content: center;
+    }
+
+    .bar-row {
+      background: rgba(5, 7, 13, 0.65);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    .bar-meta {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      margin-bottom: 10px;
+    }
+
+    .bar-track {
+      height: 14px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+
+    /* Live Terminals */
+    .terminal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 22px;
+    }
+
+    @media (max-width: 900px) {
+      .terminal-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .terminal-window {
+      background: #05070e;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .term-bar {
+      background: #0e1424;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .term-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .term-dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .term-body {
+      padding: 18px;
+      height: 290px;
+      overflow-y: auto;
+      color: #cbd5e1;
+      line-height: 1.65;
+    }
+
+    .log-line {
+      margin-bottom: 6px;
+      opacity: 0;
+      transform: translateY(6px);
+      animation: fadeUp 0.25s forwards;
+    }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .c-cyan { color: var(--cyan); }
+    .c-emerald { color: var(--emerald); }
+    .c-violet { color: #a78bfa; }
+    .c-amber { color: var(--amber); }
+    .c-muted { color: var(--text-2); }
+
+    /* Enterprise Grid */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-glow);
+    }
+
+    .feature-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 240, 255, 0.1);
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      margin-bottom: 16px;
+      border: 1px solid rgba(0, 240, 255, 0.25);
+    }
+
+    .feature-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.18rem;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      color: var(--text-1);
+      font-size: 0.92rem;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-2);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <header>
+    <div class="container nav-inner">
+      <a href="#" class="brand">
+        <div class="brand-orb"></div>
+        <span>atharva.ai</span>
+        <span class="version-pill">v0.1.0</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#topology">Live Topology</a>
+        <a href="#compression">100× Delta Compression</a>
+        <a href="#bandwidth">Bandwidth Math</a>
+        <a href="#terminals">Live Logs</a>
+        <a href="#enterprise">Self-Hosted Ops</a>
+      </nav>
+      <a href="#terminals" class="btn btn-primary">Deploy Coordinator</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- HERO -->
+    <section class="hero" id="topology">
+      <div class="hero-top">
+        <div class="status-banner">
+          <span class="pulse-dot"></span>
+          <span>POOL HETEROGENEOUS COMPUTE · GPU + TPU + SYSTEM RAM → 1 UNIFIED MODEL</span>
+        </div>
+        <h1>
+          Train in Fragments Across Any Machine.<br />
+          <span class="grad-text">Load One Unified Model Anywhere.</span>
+        </h1>
+        <p class="hero-sub">
+          <strong>atharva.ai</strong> unites idle GPUs, TPUs, and CPU/RAM across home connections and data centers using DiLoCo local-SGD, 100× top-k sparse deltas with error feedback, and windowed aggregation into a single <code>model_v{N}.pt</code> checkpoint.
+        </p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" id="triggerSyncBtn">⚡ Trigger Immediate Outer Aggregation</button>
+          <button class="btn btn-secondary" id="injectStragglerBtn">🐢 Simulate Straggler / Lease Recovery</button>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE MOTION GRAPHIC #1: MULTI-NODE FRAGMENT TOPOLOGY -->
+      <div class="motion-stage-card">
+        <div class="stage-toolbar">
+          <div class="stage-title">
+            <span class="pulse-dot"></span>
+            <span>LIVE MOTION TELEMETRY — FRAGMENT LEASE → INNER SGD → SPARSE DELTA → SINGLE CHECKPOINT</span>
+          </div>
+          <div class="legend-group">
+            <div class="legend-item">
+              <span class="legend-swatch" style="background: #00f0ff;"></span>
+              <span>Shard / Fragment Dispatch</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch" style="background: #10b981;"></span>
+              <span>Top-1% fp16 Sparse Delta</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-swatch" style="background: #a78bfa;"></span>
+              <span>Unified Checkpoint Assembly</span>
+            </div>
+          </div>
+          <div class="stage-controls">
+            <button class="chip-btn active" data-speed="1">1× Speed</button>
+            <button class="chip-btn" data-speed="2.2">2× Turbo</button>
+          </div>
+        </div>
+
+        <canvas id="topologyCanvas"></canvas>
+
+        <div class="stage-metrics-bar">
+          <div class="metric-tile">
+            <div class="metric-label">Global Model Version</div>
+            <div class="metric-value" id="metricVersion">v42</div>
+            <div class="metric-sub" id="metricCheckpoint">model_v42.pt · Ready to Load</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-label">Pooled Compute Cluster</div>
+            <div class="metric-value">5 Heterogeneous Nodes</div>
+            <div class="metric-sub">2× CUDA GPU · 1× TPU v5e · 2× System RAM</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-label">Wire Payload Compression</div>
+            <div class="metric-value">99.5% Saved</div>
+            <div class="metric-sub">Top-1% k-select + FP16 + Error Residual</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-label">Unaggregated Deltas</div>
+            <div class="metric-value" id="metricDeltas">3 queued</div>
+            <div class="metric-sub" id="metricWindow">Next window in 14s (OUTER_LR=0.7)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERACTIVE MOTION GRAPHIC #2: TENSOR SPARSIFICATION & ERROR FEEDBACK -->
+    <section id="compression">
+      <div class="section-header">
+        <div class="eyebrow">worker/compression.py · Top-K + Error Feedback</div>
+        <h2>How Fragments Travel Over Home Internet Without Losing Accuracy</h2>
+        <p style="color: var(--text-1);">
+          Every worker trains for <code>LOCAL_STEPS = 200</code> locally, computes <code>Δ = θ_local − θ_global + residual</code>, transmits only the top 1% largest coordinates in <code>fp16</code>, and saves the dropped 99% into <code>self.residual</code> for the next round.
+        </p>
+      </div>
+
+      <div class="split-grid">
+        <div class="panel">
+          <div class="tensor-viz-header">
+            <span style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--cyan);">
+              LIVE TENSOR DELTA COMPRESSION MATRIX (128 Parameter Cells)
+            </span>
+            <button class="chip-btn active" id="pulseTensorBtn">Run Compression Pass</button>
+          </div>
+          <canvas id="tensorCanvas"></canvas>
+          <div class="wire-packet">
+            <div class="packet-seg">
+              <strong>u16 len</strong>
+              <span>2 bytes</span>
+            </div>
+            <div class="packet-seg">
+              <strong>utf-8 name</strong>
+              <span>blocks.0.attn</span>
+            </div>
+            <div class="packet-seg">
+              <strong>u32 numel, k</strong>
+              <span>8 bytes</span>
+            </div>
+            <div class="packet-seg">
+              <strong>k × u32 idx</strong>
+              <span>Top 1% coords</span>
+            </div>
+            <div class="packet-seg">
+              <strong>k × f16 val</strong>
+              <span>FP16 values</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="steps-list">
+          <div class="step-item active">
+            <div class="step-head">
+              <div class="step-title"><span class="step-num">01</span> Lease Fragment &amp; Sync Weights</div>
+              <span class="step-code">GET /work/{worker_id}</span>
+            </div>
+            <p class="step-desc">
+              Coordinator assigns an idempotent data/model fragment with a 10-minute Redis ZSET lease (<code>jobs:leased</code>). If a node disconnects, its lease expires and re-queues automatically.
+            </p>
+          </div>
+
+          <div class="step-item">
+            <div class="step-head">
+              <div class="step-title"><span class="step-num">02</span> Heterogeneous Inner Loop</div>
+              <span class="step-code">LOCAL_STEPS = 200</span>
+            </div>
+            <p class="step-desc">
+              Workers execute 200 local AdamW steps on CUDA GPU, TPU, or system RAM without waiting for peers, then compute the parameter trajectory delta against global weights.
+            </p>
+          </div>
+
+          <div class="step-item">
+            <div class="step-head">
+              <div class="step-title"><span class="step-num">03</span> Top-1% Sparsification + Residual Buffer</div>
+              <span class="step-code">TOPK_FRACTION = 0.01</span>
+            </div>
+            <p class="step-desc">
+              <code>compress_state_delta()</code> packs the top 1% magnitudes in little-endian binary + <code>fp16</code> (~100× smaller). Dropped coordinates accumulate in <code>self.residual</code> so zero gradient information is lost.
+            </p>
+          </div>
+
+          <div class="step-item">
+            <div class="step-head">
+              <div class="step-title"><span class="step-num">04</span> Windowed Aggregation → Load on 1 Machine</div>
+              <span class="step-code">model_v{N+1}.pt</span>
+            </div>
+            <p class="step-desc">
+              Every 60s, <code>aggregator.py</code> drains all arrived deltas, weights them by <code>steps_completed</code>, applies <code>OUTER_LR = 0.7</code>, and writes a single unified PyTorch checkpoint ready to load on any machine.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERACTIVE MOTION GRAPHIC #3: BANDWIDTH & SCALING SIMULATOR -->
+    <section id="bandwidth">
+      <div class="section-header">
+        <div class="eyebrow">Interactive DiLoCo Bandwidth Calculator</div>
+        <h2>Why Standard Distributed Training Fails Over the Internet — And atharva.ai Works</h2>
+      </div>
+
+      <div class="split-grid">
+        <div class="panel calc-controls">
+          <div class="slider-group">
+            <label>Model Parameter Count <span id="lblParams">1.3B Params</span></label>
+            <input type="range" id="rngParams" min="1" max="4" step="1" value="2" />
+          </div>
+          <div class="slider-group">
+            <label>Pooled Machines (GPU / TPU / RAM Nodes) <span id="lblWorkers">24 Machines</span></label>
+            <input type="range" id="rngWorkers" min="2" max="128" step="2" value="24" />
+          </div>
+          <div class="slider-group">
+            <label>Inner Steps Before Sync (LOCAL_STEPS) <span id="lblSteps">200 Steps</span></label>
+            <input type="range" id="rngSteps" min="50" max="500" step="50" value="200" />
+          </div>
+        </div>
+
+        <div class="panel bar-compare">
+          <div class="bar-row">
+            <div class="bar-meta">
+              <span style="color: var(--rose);">Standard AllReduce (Dense FP32 every step)</span>
+              <strong id="valDense" style="color: var(--rose);">1,040.0 GB / 200 steps</strong>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: 100%; background: linear-gradient(90deg, #f43f5e, #fb7185);"></div>
+            </div>
+          </div>
+
+          <div class="bar-row">
+            <div class="bar-meta">
+              <span style="color: var(--emerald);">atharva.ai (1 sync / 200 steps + Top-1% FP16)</span>
+              <strong id="valAtharva" style="color: var(--emerald);">0.078 GB (78 MB) / 200 steps</strong>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" id="barAtharva" style="width: 1.5%; background: linear-gradient(90deg, var(--cyan), var(--emerald));"></div>
+            </div>
+          </div>
+
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--cyan); text-align: right;">
+            Total Communication Reduction: <strong id="valRatio">13,333× less network traffic</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE DUAL TERMINAL STREAM -->
+    <section id="terminals">
+      <div class="section-header">
+        <div class="eyebrow">Live Execution Stream</div>
+        <h2>From Multi-Machine Fragments to One Loaded Model</h2>
+      </div>
+
+      <div class="terminal-grid">
+        <div class="terminal-window">
+          <div class="term-bar">
+            <div class="term-dots">
+              <span style="background: #f43f5e;"></span>
+              <span style="background: #f59e0b;"></span>
+              <span style="background: #10b981;"></span>
+            </div>
+            <span class="c-muted">coordinator/aggregator.py + main.py (:8000)</span>
+            <span class="c-emerald">● ONLINE</span>
+          </div>
+          <div class="term-body" id="coordTerm"></div>
+        </div>
+
+        <div class="terminal-window">
+          <div class="term-bar">
+            <div class="term-dots">
+              <span style="background: #f43f5e;"></span>
+              <span style="background: #f59e0b;"></span>
+              <span style="background: #10b981;"></span>
+            </div>
+            <span class="c-muted">worker/client.py → Single-Machine Loader</span>
+            <span class="c-cyan">● TRAINING</span>
+          </div>
+          <div class="term-body" id="workerTerm"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ENTERPRISE & SELF-HOSTED FEATURES -->
+    <section id="enterprise">
+      <div class="section-header">
+        <div class="eyebrow">Built for Self-Hosted &amp; Air-Gapped Teams</div>
+        <h2>Production Operations Out of the Box</h2>
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">Ed</div>
+          <h3>Air-Gapped Ed25519 Licensing</h3>
+          <p>
+            <code>coordinator/license.py</code> verifies signed <code>license.json</code> payloads completely offline using a baked-in Ed25519 public key, enforcing GPU caps with a 14-day renewal grace window.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">Dr</div>
+          <h3>One-Command Support Doctor</h3>
+          <p>
+            Run <code>python cli/doctor.py</code> on any coordinator or worker to generate a secret-redacted <code>atharva-doctor.tar.gz</code> containing GPU inventory, Redis queue depths, and Docker logs.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">St</div>
+          <h3>Staleness-Guarded Async Windows</h3>
+          <p>
+            Workers never block on stragglers. Deltas within <code>STALE_VERSION_TOLERANCE = 1</code> are weighted-averaged in the next 60s window; overly stale leases safely re-queue.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      atharva.ai v0.1.0 · Distributed Fragment Training Across GPU, TPU &amp; RAM → Single Unified Model
+    </div>
+  </footer>
+
+  <script>
+    // =========================================================================
+    // MOTION GRAPHIC 1: HETEROGENEOUS TOPOLOGY + FRAGMENT DISPATCH + ASSEMBLY
+    // =========================================================================
+    const topoCanvas = document.getElementById('topologyCanvas');
+    const tCtx = topoCanvas.getContext('2d');
+    let speedMult = 1;
+    let modelVersion = 42;
+    let queuedDeltas = 3;
+    let windowCountdown = 14;
+
+    const workerNodes = [
+      { id: 'worker-gpu-01', name: 'Node 01 · RTX 4090', type: 'GPU · 24 GB VRAM', color: '#00f0ff', progress: 0.35, rate: 0.0038, loss: 2.41, straggler: false },
+      { id: 'worker-tpu-02', name: 'Node 02 · Cloud TPU v5e', type: 'TPU · 16 GB HBM', color: '#a78bfa', progress: 0.72, rate: 0.0046, loss: 2.18, straggler: false },
+      { id: 'worker-ram-03', name: 'Node 03 · Mac Studio M3', type: 'RAM · 64 GB Unified', color: '#10b981', progress: 0.15, rate: 0.0026, loss: 2.64, straggler: false },
+      { id: 'worker-gpu-04', name: 'Node 04 · A100-SXM4', type: 'GPU · 80 GB VRAM', color: '#00f0ff', progress: 0.58, rate: 0.0052, loss: 1.98, straggler: false },
+      { id: 'worker-ram-05', name: 'Node 05 · Xeon DDR5 Box', type: 'CPU/RAM · 128 GB', color: '#f59e0b', progress: 0.84, rate: 0.0022, loss: 2.52, straggler: false }
+    ];
+
+    const packets = []; // { fromX, fromY, toX, toY, t, speed, color, label }
+    let assemblyPulse = 0;
+
+    function resizeTopo() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = topoCanvas.getBoundingClientRect();
+      topoCanvas.width = rect.width * dpr;
+      topoCanvas.height = rect.height * dpr;
+      tCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resizeTopo);
+    resizeTopo();
+
+    function spawnPacket(fromX, fromY, toX, toY, color, label, speed = 0.018) {
+      packets.push({ fromX, fromY, toX, toY, t: 0, speed, color, label });
+    }
+
+    function triggerAggregation(coordX, coordY, targetX, targetY) {
+      modelVersion++;
+      queuedDeltas = 0;
+      windowCountdown = 60;
+      assemblyPulse = 1.0;
+      document.getElementById('metricVersion').textContent = `v${modelVersion}`;
+      document.getElementById('metricCheckpoint').textContent = `model_v${modelVersion}.pt · Loaded on Target`;
+      document.getElementById('metricDeltas').textContent = `${queuedDeltas} queued`;
+
+      // Burst of merged checkpoint fragments flying from Coordinator to Single Target Machine
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          spawnPacket(coordX, coordY, targetX, targetY, '#a78bfa', `model_v${modelVersion}.pt`, 0.022);
+        }, i * 95);
+      }
+      appendCoordLog(`[aggregator] v${modelVersion - 1} -> v${modelVersion} (weighted avg OUTER_LR=0.7) -> saved model_v${modelVersion}.pt`);
+    }
+
+    function drawRoundedRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function renderTopology(now) {
+      const W = topoCanvas.clientWidth;
+      const H = topoCanvas.clientHeight;
+      tCtx.clearRect(0, 0, W, H);
+
+      const leftX = Math.max(150, W * 0.19);
+      const coordX = W * 0.54;
+      const coordY = H * 0.5;
+      const targetX = W * 0.85;
+      const targetY = H * 0.5;
+
+      // Position worker nodes vertically on the left
+      workerNodes.forEach((node, idx) => {
+        const spacing = (H - 80) / workerNodes.length;
+        node.x = leftX;
+        node.y = 52 + idx * spacing + spacing * 0.35;
+      });
+
+      // Draw bezier connection curves from Workers <-> Coordinator
+      workerNodes.forEach((node) => {
+        tCtx.save();
+        tCtx.beginPath();
+        tCtx.moveTo(node.x + 105, node.y);
+        const cp1x = (node.x + 105 + coordX - 90) * 0.5;
+        tCtx.bezierCurveTo(cp1x, node.y, cp1x, coordY, coordX - 90, coordY);
+        tCtx.strokeStyle = node.straggler ? 'rgba(244, 63, 94, 0.28)' : 'rgba(148, 163, 184, 0.16)';
+        tCtx.lineWidth = 1.5;
+        tCtx.setLineDash(node.straggler ? [5, 5] : []);
+        tCtx.stroke();
+        tCtx.restore();
+      });
+
+      // Draw bridge between Coordinator -> Target Machine ("Load on 1 Machine")
+      tCtx.save();
+      tCtx.beginPath();
+      tCtx.moveTo(coordX + 90, coordY);
+      tCtx.lineTo(targetX - 95, targetY);
+      tCtx.strokeStyle = 'rgba(167, 139, 250, 0.35)';
+      tCtx.lineWidth = 3;
+      tCtx.stroke();
+      tCtx.restore();
+
+      // Update & Draw Worker Nodes
+      workerNodes.forEach((node, idx) => {
+        if (!node.straggler) {
+          node.progress += node.rate * speedMult;
+          if (node.progress >= 1) {
+            node.progress = 0;
+            node.loss = Math.max(1.12, +(node.loss - 0.03).toFixed(2));
+            // Emit top-k sparse delta to Coordinator
+            spawnPacket(node.x + 105, node.y, coordX - 88, coordY, '#10b981', 'Top-1% fp16 Δ', 0.02 * speedMult);
+            // Coordinator sends new shard lease back
+            setTimeout(() => {
+              spawnPacket(coordX - 88, coordY, node.x + 105, node.y, '#00f0ff', `shard_000${40 + idx}.npy`, 0.022 * speedMult);
+            }, 350);
+          }
+        }
+
+        const cardW = 210;
+        const cardH = 68;
+        const cx = node.x - cardW / 2;
+        const cy = node.y - cardH / 2;
+
+        tCtx.save();
+        drawRoundedRect(tCtx, cx, cy, cardW, cardH, 10);
+        tCtx.fillStyle = 'rgba(11, 15, 28, 0.92)';
+        tCtx.fill();
+        tCtx.lineWidth = 1.2;
+        tCtx.strokeStyle = node.straggler ? '#f43f5e' : 'rgba(148, 163, 184, 0.24)';
+        tCtx.stroke();
+
+        // Status indicator bar on left edge
+        drawRoundedRect(tCtx, cx, cy, 5, cardH, 3);
+        tCtx.fillStyle = node.straggler ? '#f43f5e' : node.color;
+        tCtx.fill();
+
+        // Text
+        tCtx.fillStyle = '#f8fafc';
+        tCtx.font = '600 12px "Space Grotesk", sans-serif';
+        tCtx.fillText(node.name, cx + 14, cy + 21);
+
+        tCtx.fillStyle = '#94a3b8';
+        tCtx.font = '11px "JetBrains Mono", monospace';
+        tCtx.fillText(node.straggler ? 'LEASE EXPIRED -> REQUEUED' : node.type, cx + 14, cy + 38);
+
+        // Progress bar for LOCAL_STEPS = 200
+        const barX = cx + 14;
+        const barY = cy + 48;
+        const barW = cardW - 28;
+        tCtx.fillStyle = 'rgba(255,255,255,0.08)';
+        drawRoundedRect(tCtx, barX, barY, barW, 7, 3);
+        tCtx.fill();
+
+        tCtx.fillStyle = node.straggler ? '#f43f5e' : node.color;
+        drawRoundedRect(tCtx, barX, barY, Math.max(6, barW * node.progress), 7, 3);
+        tCtx.fill();
+
+        // Step count badge
+        tCtx.fillStyle = '#cbd5e1';
+        tCtx.font = '10px "JetBrains Mono", monospace';
+        const stepNum = Math.floor(node.progress * 200);
+        tCtx.fillText(`${stepNum}/200`, cx + cardW - 48, cy + 21);
+        tCtx.restore();
+      });
+
+      // Draw Central Coordinator & Aggregator Node
+      tCtx.save();
+      const cRadius = 78;
+      const grad = tCtx.createRadialGradient(coordX, coordY, 10, coordX, coordY, cRadius + 24);
+      grad.addColorStop(0, 'rgba(0, 240, 255, 0.22)');
+      grad.addColorStop(1, 'rgba(0, 240, 255, 0)');
+      tCtx.fillStyle = grad;
+      tCtx.beginPath();
+      tCtx.arc(coordX, coordY, cRadius + 24, 0, Math.PI * 2);
+      tCtx.fill();
+
+      drawRoundedRect(tCtx, coordX - 88, coordY - 72, 176, 144, 16);
+      tCtx.fillStyle = '#0b1120';
+      tCtx.fill();
+      tCtx.lineWidth = 1.8;
+      tCtx.strokeStyle = '#00f0ff';
+      tCtx.stroke();
+
+      tCtx.fillStyle = '#00f0ff';
+      tCtx.font = '600 11px "JetBrains Mono", monospace';
+      tCtx.textAlign = 'center';
+      tCtx.fillText('COORDINATOR + REDIS', coordX, coordY - 42);
+
+      tCtx.fillStyle = '#f8fafc';
+      tCtx.font = '700 15px "Space Grotesk", sans-serif';
+      tCtx.fillText('Windowed Aggregator', coordX, coordY - 18);
+
+      tCtx.fillStyle = '#94a3b8';
+      tCtx.font = '11px "JetBrains Mono", monospace';
+      tCtx.fillText(`round:deltas = ${queuedDeltas}`, coordX, coordY + 6);
+      tCtx.fillText(`OUTER_LR = 0.7`, coordX, coordY + 24);
+
+      tCtx.fillStyle = '#10b981';
+      tCtx.fillText(`Checkpoint: v${modelVersion}`, coordX, coordY + 48);
+      tCtx.restore();
+
+      // Draw Right-Side Target Node: "One Machine Loads Full Unified Model"
+      tCtx.save();
+      if (assemblyPulse > 0) {
+        assemblyPulse = Math.max(0, assemblyPulse - 0.02);
+      }
+      const pulseGlow = 18 + assemblyPulse * 28;
+      const tGrad = tCtx.createRadialGradient(targetX, targetY, 12, targetX, targetY, 85 + pulseGlow);
+      tGrad.addColorStop(0, 'rgba(167, 139, 250, 0.32)');
+      tGrad.addColorStop(1, 'rgba(167, 139, 250, 0)');
+      tCtx.fillStyle = tGrad;
+      tCtx.beginPath();
+      tCtx.arc(targetX, targetY, 85 + pulseGlow, 0, Math.PI * 2);
+      tCtx.fill();
+
+      drawRoundedRect(tCtx, targetX - 94, targetY - 82, 188, 164, 16);
+      tCtx.fillStyle = '#0d1025';
+      tCtx.fill();
+      tCtx.lineWidth = 2;
+      tCtx.strokeStyle = '#a78bfa';
+      tCtx.stroke();
+
+      tCtx.textAlign = 'center';
+      tCtx.fillStyle = '#a78bfa';
+      tCtx.font = '600 11px "JetBrains Mono", monospace';
+      tCtx.fillText('SINGLE TARGET MACHINE', targetX, targetY - 52);
+
+      tCtx.fillStyle = '#ffffff';
+      tCtx.font = '700 15px "Space Grotesk", sans-serif';
+      tCtx.fillText(`Unified model_v${modelVersion}.pt`, targetX, targetY - 28);
+
+      // Draw 4 assembled neural layer blocks inside the Single Target Machine
+      const blockColors = ['#00f0ff', '#a78bfa', '#10b981', '#f59e0b'];
+      for (let b = 0; b < 4; b++) {
+        const bx = targetX - 72 + b * 37;
+        const by = targetY - 12;
+        drawRoundedRect(tCtx, bx, by, 31, 32, 6);
+        tCtx.fillStyle = 'rgba(255,255,255,0.05)';
+        tCtx.fill();
+        tCtx.strokeStyle = blockColors[b];
+        tCtx.lineWidth = 1.4;
+        tCtx.stroke();
+        tCtx.fillStyle = blockColors[b];
+        tCtx.font = '600 9px "JetBrains Mono", monospace';
+        tCtx.fillText(`L${b}`, bx + 15.5, by + 20);
+      }
+
+      tCtx.fillStyle = '#10b981';
+      tCtx.font = '11px "JetBrains Mono", monospace';
+      tCtx.fillText('torch.load() ✓ Ready', targetX, targetY + 46);
+      tCtx.fillStyle = '#94a3b8';
+      tCtx.font = '10px "JetBrains Mono", monospace';
+      tCtx.fillText('All fragments merged', targetX, targetY + 64);
+      tCtx.restore();
+
+      // Update & Draw Flying Packets
+      for (let i = packets.length - 1; i >= 0; i--) {
+        const p = packets[i];
+        p.t += p.speed;
+        if (p.t >= 1) {
+          if (p.color === '#10b981') {
+            queuedDeltas++;
+            document.getElementById('metricDeltas').textContent = `${queuedDeltas} queued`;
+            if (queuedDeltas >= 5) {
+              triggerAggregation(coordX, coordY, targetX, targetY);
+            }
+          }
+          packets.splice(i, 1);
+          continue;
+        }
+
+        // Cubic bezier interpolation
+        const cpX = (p.fromX + p.toX) * 0.5;
+        const u = 1 - p.t;
+        const x = u * u * u * p.fromX + 3 * u * u * p.t * cpX + 3 * u * p.t * p.t * cpX + p.t * p.t * p.t * p.toX;
+        const y = u * u * u * p.fromY + 3 * u * u * p.t * p.fromY + 3 * u * p.t * p.t * p.toY + p.t * p.t * p.t * p.toY;
+
+        tCtx.save();
+        tCtx.beginPath();
+        tCtx.arc(x, y, 5.5, 0, Math.PI * 2);
+        tCtx.fillStyle = p.color;
+        tCtx.shadowColor = p.color;
+        tCtx.shadowBlur = 12;
+        tCtx.fill();
+
+        tCtx.font = '600 10px "JetBrains Mono", monospace';
+        tCtx.fillStyle = p.color;
+        tCtx.fillText(p.label, x + 9, y - 6);
+        tCtx.restore();
+      }
+
+      requestAnimationFrame(renderTopology);
+    }
+    requestAnimationFrame(renderTopology);
+
+    // Speed buttons
+    document.querySelectorAll('[data-speed]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-speed]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        speedMult = parseFloat(btn.dataset.speed);
+      });
+    });
+
+    // Manual trigger buttons
+    document.getElementById('triggerSyncBtn').addEventListener('click', () => {
+      const W = topoCanvas.clientWidth;
+      const H = topoCanvas.clientHeight;
+      triggerAggregation(W * 0.54, H * 0.5, W * 0.85, H * 0.5);
+    });
+
+    document.getElementById('injectStragglerBtn').addEventListener('click', () => {
+      const target = workerNodes[4];
+      target.straggler = !target.straggler;
+      if (target.straggler) {
+        appendCoordLog(`[lease] worker-ram-05 lease expired (>600s) -> job re-queued to jobs:pending`);
+      } else {
+        appendCoordLog(`[lease] worker-ram-05 re-registered and resumed training`);
+      }
+    });
+
+    // =========================================================================
+    // MOTION GRAPHIC 2: TENSOR TOP-K SPARSIFICATION & ERROR FEEDBACK RESIDUAL
+    // =========================================================================
+    const tensorCanvas = document.getElementById('tensorCanvas');
+    const xCtx = tensorCanvas.getContext('2d');
+    const COLS = 16;
+    const ROWS = 8;
+    const cells = [];
+
+    function initTensorCells() {
+      cells.length = 0;
+      for (let i = 0; i < COLS * ROWS; i++) {
+        const mag = Math.random();
+        cells.push({
+          mag,
+          isTopK: false,
+          residualAccum: Math.random() * 0.35
+        });
+      }
+      // Mark top 12 magnitudes as Top-K (illustrative highlight)
+      const sorted = [...cells].sort((a, b) => (b.mag + b.residualAccum) - (a.mag + a.residualAccum));
+      const cutoff = sorted[11].mag + sorted[11].residualAccum;
+      cells.forEach((c) => {
+        c.isTopK = (c.mag + c.residualAccum) >= cutoff;
+      });
+    }
+    initTensorCells();
+
+    function resizeTensor() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = tensorCanvas.getBoundingClientRect();
+      tensorCanvas.width = rect.width * dpr;
+      tensorCanvas.height = rect.height * dpr;
+      xCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resizeTensor);
+    resizeTensor();
+
+    let tensorPhase = 0;
+    function renderTensor() {
+      tensorPhase += 0.035;
+      const W = tensorCanvas.clientWidth;
+      const H = tensorCanvas.clientHeight;
+      xCtx.clearRect(0, 0, W, H);
+
+      const padX = 20;
+      const padY = 42;
+      const gridW = W - padX * 2;
+      const gridH = H - padY - 20;
+      const cellW = gridW / COLS;
+      const cellH = gridH / ROWS;
+
+      xCtx.font = '600 11px "JetBrains Mono", monospace';
+      xCtx.fillStyle = '#10b981';
+      xCtx.fillText('■ Cyan/Green = Top-1% Selected (Sent as fp16)', 20, 24);
+      xCtx.fillStyle = '#64748b';
+      xCtx.fillText('■ Dim Cells = Dropped 99% -> Saved in self.residual for Next Round', 340, 24);
+
+      cells.forEach((c, idx) => {
+        const col = idx % COLS;
+        const row = Math.floor(idx / COLS);
+        const x = padX + col * cellW + 3;
+        const y = padY + row * cellH + 3;
+        const w = cellW - 6;
+        const h = cellH - 6;
+
+        xCtx.save();
+        drawRoundedRect(xCtx, x, y, w, h, 5);
+        if (c.isTopK) {
+          const glow = 0.75 + 0.25 * Math.sin(tensorPhase * 2 + idx);
+          xCtx.fillStyle = `rgba(0, 240, 255, ${glow * 0.28})`;
+          xCtx.fill();
+          xCtx.strokeStyle = '#00f0ff';
+          xCtx.lineWidth = 1.5;
+          xCtx.stroke();
+
+          xCtx.fillStyle = '#f8fafc';
+          xCtx.font = '600 9px "JetBrains Mono", monospace';
+          xCtx.fillText((c.mag + c.residualAccum).toFixed(2), x + 5, y + h / 2 + 3);
+        } else {
+          xCtx.fillStyle = 'rgba(148, 163, 184, 0.07)';
+          xCtx.fill();
+          xCtx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+          xCtx.lineWidth = 1;
+          xCtx.stroke();
+
+          xCtx.fillStyle = '#475569';
+          xCtx.font = '9px "JetBrains Mono", monospace';
+          xCtx.fillText('res', x + 6, y + h / 2 + 3);
+        }
+        xCtx.restore();
+      });
+
+      requestAnimationFrame(renderTensor);
+    }
+    requestAnimationFrame(renderTensor);
+
+    document.getElementById('pulseTensorBtn').addEventListener('click', () => {
+      initTensorCells();
+    });
+
+    // =========================================================================
+    // MOTION GRAPHIC 3: INTERACTIVE BANDWIDTH CALCULATOR
+    // =========================================================================
+    const paramPresets = {
+      1: { label: '28M Params (TinyLM)', count: 28e6 },
+      2: { label: '1.3B Params', count: 1.3e9 },
+      3: { label: '7B Params', count: 7e9 },
+      4: { label: '70B Params', count: 70e9 }
+    };
+
+    function updateCalculator() {
+      const pIdx = document.getElementById('rngParams').value;
+      const workers = parseInt(document.getElementById('rngWorkers').value, 10);
+      const steps = parseInt(document.getElementById('rngSteps').value, 10);
+
+      const preset = paramPresets[pIdx];
+      document.getElementById('lblParams').textContent = preset.label;
+      document.getElementById('lblWorkers').textContent = `${workers} Machines`;
+      document.getElementById('lblSteps').textContent = `${steps} Steps`;
+
+      // Dense FP32 AllReduce per step across steps: 4 bytes * params * steps
+      const denseGB = (preset.count * 4 * steps) / 1e9;
+      // atharva.ai: 1 sync per `steps`, top 1% coordinates, (4B index + 2B fp16 = 6B per kept param)
+      const atharvaGB = (preset.count * 0.01 * 6) / 1e9;
+      const ratio = Math.round(denseGB / atharvaGB);
+
+      document.getElementById('valDense').textContent =
+        denseGB >= 1000 ? `${(denseGB / 1000).toFixed(2)} TB / ${steps} steps` : `${denseGB.toFixed(1)} GB / ${steps} steps`;
+      document.getElementById('valAtharva').textContent =
+        atharvaGB < 1 ? `${(atharvaGB * 1000).toFixed(1)} MB / ${steps} steps` : `${atharvaGB.toFixed(2)} GB / ${steps} steps`;
+      document.getElementById('valRatio').textContent = `${ratio.toLocaleString()}× less network traffic`;
+    }
+
+    ['rngParams', 'rngWorkers', 'rngSteps'].forEach((id) => {
+      document.getElementById(id).addEventListener('input', updateCalculator);
+    });
+    updateCalculator();
+
+    // =========================================================================
+    // LIVE TERMINAL LOG SIMULATION
+    // =========================================================================
+    const coordTerm = document.getElementById('coordTerm');
+    const workerTerm = document.getElementById('workerTerm');
+
+    function appendCoordLog(html) {
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      div.innerHTML = `<span class="c-muted">[${new Date().toLocaleTimeString()}]</span> ${html}`;
+      coordTerm.appendChild(div);
+      if (coordTerm.children.length > 14) coordTerm.removeChild(coordTerm.firstChild);
+      coordTerm.scrollTop = coordTerm.scrollHeight;
+    }
+
+    function appendWorkerLog(html) {
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      div.innerHTML = `<span class="c-muted">[${new Date().toLocaleTimeString()}]</span> ${html}`;
+      workerTerm.appendChild(div);
+      if (workerTerm.children.length > 14) workerTerm.removeChild(workerTerm.firstChild);
+      workerTerm.scrollTop = workerTerm.scrollHeight;
+    }
+
+    const initialCoordLogs = [
+      `<span class="c-cyan">[license]</span> Ed25519 signature verified offline (plan=enterprise, max_gpus=100)`,
+      `<span class="c-emerald">[seed_jobs]</span> seeded 100 idempotent shard jobs into Redis jobs:pending`,
+      `<span class="c-cyan">[register]</span> worker-gpu-01 (RTX 4090 24.0GB) -> leased job_8f91a`,
+      `<span class="c-violet">[register]</span> worker-tpu-02 (Cloud TPU v5e 16.0GB) -> leased job_3c20b`,
+      `<span class="c-emerald">[register]</span> worker-ram-03 (Apple M3 Unified 64.0GB) -> leased job_7d44e`,
+      `<span class="c-amber">[gradients]</span> accepted Top-1% fp16 delta from worker-gpu-04 (200 steps, loss=1.9821)`
+    ];
+
+    const initialWorkerLogs = [
+      `<span class="c-cyan">[worker]</span> synced to global checkpoint <span class="c-emerald">model_v42.pt</span>`,
+      `<span class="c-violet">[train]</span> running LOCAL_STEPS=200 AdamW (lr=3e-4, batch_size=8) on fragment shard_00041.npy`,
+      `<span class="c-emerald">[compress]</span> top-1% sparsification + fp16 packing -> 99.5% reduction (+residual buffered)`,
+      `<span class="c-cyan">[upload]</span> POST /gradients accepted=True latest_model_version=42`,
+      `<span class="c-amber">[single-host]</span> state = torch.load("model_v42.pt", map_location="cuda") -> Unified model ready!`
+    ];
+
+    initialCoordLogs.forEach((l, i) => setTimeout(() => appendCoordLog(l), i * 220));
+    initialWorkerLogs.forEach((l, i) => setTimeout(() => appendWorkerLog(l), i * 260));
+
+    setInterval(() => {
+      windowCountdown = Math.max(1, windowCountdown - 1);
+      document.getElementById('metricWindow').textContent = `Next window in ${windowCountdown}s (OUTER_LR=0.7)`;
+      if (Math.random() < 0.45) {
+        const n = workerNodes[Math.floor(Math.random() * workerNodes.length)];
+        appendWorkerLog(
+          `<span class="c-cyan">[${n.id}]</span> fragment step 200/200 complete · loss=${n.loss.toFixed(4)} · uploaded sparse fp16 delta`
+        );
+      }
+    }, 1800);
+  </script>
+</body>
+</html>

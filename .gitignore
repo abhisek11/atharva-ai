@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+*.pt
+atharva-doctor-*.tar.gz
+license.json
+*.key

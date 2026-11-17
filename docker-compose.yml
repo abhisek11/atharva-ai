@@ -1,0 +1,24 @@
+services:
+  redis:
+    image: redis:7-alpine
+    volumes: ["redis-data:/data"]
+    command: redis-server --appendonly yes
+
+  api:
+    build: .
+    command: uvicorn coordinator.main:app --host 0.0.0.0 --port 8000 --workers 2
+    environment: { REDIS_HOST: redis, MODEL_DIR: /data/models }
+    volumes: ["model-data:/data/models"]
+    ports: ["8000:8000"]
+    depends_on: [redis]
+
+  aggregator:
+    build: .
+    command: python coordinator/aggregator.py
+    environment: { REDIS_HOST: redis, MODEL_DIR: /data/models, AGGREGATE_INTERVAL_S: "60" }
+    volumes: ["model-data:/data/models"]
+    depends_on: [redis]
+
+volumes:
+  redis-data:
+  model-data:
