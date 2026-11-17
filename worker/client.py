@@ -124,14 +124,20 @@ class Worker:
         self.model_version = target_version
         print(f"[worker] synced to model v{target_version}")
 
-    def _fetch_shard(self, shard_url: str) -> torch.Tensor:
-        """Return a LongTensor [num_seqs, seq_len] of token ids."""
+    def _fetch_shard(self, work: dict) -> torch.Tensor:
+        """Return a LongTensor [num_seqs, seq_len] of token ids from the fed batch."""
+        token_ids = work.get("token_ids")
+        if token_ids and len(token_ids) >= 128:
+            t = torch.tensor(token_ids, dtype=torch.long) % 50257
+            repeats = max(1, (256 * 128 + len(t) - 1) // len(t))
+            t = t.repeat(repeats)[: 256 * 128]
+            return t.view(256, 128)
         return torch.randint(0, 50257, (256, 128))
 
     def _train(self, work: dict) -> tuple[str, float, dict]:
         self.training_active = True
         try:
-            data = self._fetch_shard(work["shard_url"])
+            data = self._fetch_shard(work)
             before = {n: p.detach().clone()
                       for n, p in self.model.named_parameters()}
 

@@ -123,10 +123,30 @@ class NetworkScanResponse(BaseModel):
     ranked_nodes: List[RankedNode] = Field(default_factory=list)
 
 
+class DataFeedRequest(BaseModel):
+    dataset_name: str = "custom-feed"
+    raw_text: str                         # text/corpus fed from the main interface
+    num_batches: int = 4                  # how many distributed batches to split into
+    lr: float = 3e-4
+    local_steps: int = 200
+
+
+class DataFeedResponse(BaseModel):
+    dataset_id: str
+    dataset_name: str
+    total_tokens: int
+    batches_created: int
+    job_ids: List[str] = Field(default_factory=list)
+
+
 class WorkItem(BaseModel):
     job_id: str
     model_version: int
-    shard_url: str            # data shard the worker should train on
+    shard_url: str            # data shard URL or inline batch reference
+    dataset_name: str = "default"
+    batch_index: int = 0
+    total_batches: int = 1
+    token_ids: Optional[List[int]] = None  # direct batch tokens fed from main UI
     local_steps: int          # DiLoCo-style: steps before sync (scaled by rank/capacity)
     lr: float
     batch_size: int           # scaled to device free VRAM/RAM capacity

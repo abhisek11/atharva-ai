@@ -649,6 +649,87 @@
       font-family: var(--font-mono);
       font-size: 0.82rem;
     }
+
+    /* Data Feeder & Batch Pipeline Studio */
+    .feeder-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 1024px) {
+      .feeder-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feed-textarea {
+      width: 100%;
+      height: 112px;
+      background: #050811;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text-0);
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      resize: vertical;
+      margin-bottom: 10px;
+    }
+
+    .feed-textarea:focus {
+      outline: none;
+      border-color: var(--cyan);
+    }
+
+    .batch-pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+      max-height: 195px;
+      overflow-y: auto;
+    }
+
+    .batch-chip {
+      background: rgba(5, 8, 17, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      transition: all 0.2s;
+    }
+
+    .batch-chip.queued {
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    .batch-chip.training {
+      border-color: var(--cyan);
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.14);
+    }
+
+    .batch-chip.done {
+      border-color: rgba(16, 185, 129, 0.45);
+      background: rgba(16, 185, 129, 0.06);
+    }
+
+    .final-model-banner {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.14), rgba(167, 139, 250, 0.14));
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+    }
   </style>
 </head>
 <body>
@@ -715,6 +796,92 @@
         <div class="kpi-label">Cluster Throughput</div>
         <div class="kpi-val" id="kpiThroughput">18.4k tok/s</div>
         <div class="kpi-sub">100× Top-1% FP16 Deltas</div>
+      </div>
+    </div>
+
+    <!-- STEP 1 -> 2 -> 3: MAIN INTERFACE DATA FEEDER & BATCH DISPATCHER STUDIO -->
+    <div class="panel" style="border-color: rgba(0, 240, 255, 0.3);">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">
+            <span style="color: var(--cyan);">Step 1: Feed Training Data</span>
+            <span style="color: var(--text-2);">→</span>
+            <span style="color: var(--emerald);">Step 2: Dispatch Batches to Ranked PCs</span>
+            <span style="color: var(--text-2);">→</span>
+            <span style="color: var(--violet);">Step 3: Return to Aggregator for Final Model</span>
+          </div>
+          <div class="panel-subtitle">
+            Feed text/JSONL/files here (`POST /feed`) — automatically split into batches, loaded across Ranked LAN machines, and aggregated back into one Final Model
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="mini-btn" onclick="loadSampleCorpus('llm')">Preset: LLM Instruction Corpus</button>
+          <button class="mini-btn" onclick="loadSampleCorpus('medical')">Preset: Medical QA Dataset</button>
+          <button class="mini-btn" onclick="loadSampleCorpus('code')">Preset: Python Code Shards</button>
+        </div>
+      </div>
+
+      <div class="feeder-grid">
+        <!-- Left: Input Data Feeder -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-1);">
+            <span>Input Training Corpus / JSONL / Raw Text</span>
+            <label style="color: var(--cyan); cursor: pointer;">
+              📂 Upload File (.txt/.jsonl/.csv)
+              <input type="file" id="feedFileInput" style="display: none;" accept=".txt,.jsonl,.json,.csv,.md" />
+            </label>
+          </div>
+          <textarea class="feed-textarea" id="feedTextInput">{"instruction": "Explain distributed local-SGD training across heterogeneous GPUs and TPUs.", "output": "Each ranked machine loads a data batch locally, runs inner AdamW steps, and returns a Top-1% FP16 sparse weight delta to the central aggregator to build one unified checkpoint."}
+{"instruction": "How does atharva.ai rank devices on the same network?", "output": "It broadcasts a UDP scan probe on port 49152, checks which devices are FREE, scores their free VRAM and RAM, and assigns batches in rank order."}</textarea>
+
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <label style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-1);">
+                Split into:
+                <select class="ctrl-select" id="feedBatchCountSelect">
+                  <option value="4">4 Batches</option>
+                  <option value="6" selected>6 Batches</option>
+                  <option value="8">8 Batches</option>
+                  <option value="12">12 Batches</option>
+                </select>
+              </label>
+              <input type="text" id="feedDatasetName" value="atharva-custom-v1" style="background:#050811; border:1px solid var(--border); color:var(--text-0); padding:7px 10px; border-radius:8px; font-family:var(--font-mono); font-size:0.75rem; width:155px;" />
+            </div>
+
+            <button class="ctrl-btn primary" id="dispatchBatchesBtn">
+              🚀 Feed Data &amp; Dispatch Batches to Ranked Machines
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Live Dispatched Batches & Aggregator Return Progress -->
+        <div style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; margin-bottom: 6px;">
+              <span id="batchQueueSummary" style="color: var(--cyan);">Active Dataset: atharva-custom-v1 (6 Batches Split Across Top Ranked PCs)</span>
+              <strong id="batchReturnCounter" style="color: var(--emerald);">Returned to Aggregator: 2 / 6 Batches</strong>
+            </div>
+            <div class="gauge-track" style="height: 9px; margin-bottom: 10px;">
+              <div class="gauge-fill" id="batchAggregateProgressBar" style="width: 33%; background: linear-gradient(90deg, var(--cyan), var(--emerald), var(--violet));"></div>
+            </div>
+
+            <div class="batch-pipeline-grid" id="batchPipelineGrid"></div>
+          </div>
+
+          <div class="final-model-banner" id="finalModelBanner">
+            <div>
+              <strong style="color: var(--emerald); display: block;" id="finalModelStatusTitle">
+                ✓ FINAL AGGREGATED MODEL: final_model_v42.pt
+              </strong>
+              <span style="color: var(--text-1); font-size: 0.72rem;" id="finalModelStatusSub">
+                All returned machine batches merged via step-weighted outer step (OUTER_LR=0.7)
+              </span>
+            </div>
+            <button class="ctrl-btn primary" id="downloadFinalModelBtn">
+              ⬇ Download Final Model (.pt)
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1561,6 +1728,201 @@
     logEvent('SCANNER', '#00f0ff', 'UDP 49152 broadcast on 192.168.31.0/24 -> 6 PCs/laptops discovered (5 FREE, 1 BUSY)');
     logEvent('RANKER', '#10b981', 'Selected Top 4 free devices by capacity: #1 rtx4090-rig, #2 macbook-m3-max, #3 tpu-node-02, #4 abhisek');
     logEvent('LOADER', '#a78bfa', 'Unified model_v42.pt mounted on Single Target Host');
+
+    // =========================================================================
+    // DATA FEEDER -> DISTRIBUTED BATCH QUEUE -> AGGREGATOR FINAL MODEL PIPELINE
+    // =========================================================================
+    let activeDatasetName = 'atharva-custom-v1';
+    let fedBatches = [];
+
+    const sampleCorpora = {
+      llm: `{"instruction": "Explain distributed local-SGD training across heterogeneous GPUs and TPUs.", "output": "Each ranked machine loads a data batch locally, runs inner AdamW steps, and returns a Top-1% FP16 sparse weight delta to the central aggregator to build one unified checkpoint."}\n{"instruction": "How does atharva.ai rank devices on the same network?", "output": "It broadcasts a UDP scan probe on port 49152, checks which devices are FREE, scores their free VRAM and RAM, and assigns batches in rank order."}`,
+      medical: `{"patient_query": "What are standard first-line diagnostics for acute chest pain?", "clinical_note": "12-lead ECG within 10 minutes, serial high-sensitivity cardiac troponins, and chest radiograph."}\n{"patient_query": "Summarize drug-interaction precautions for anticoagulants.", "clinical_note": "Monitor INR and renal function; avoid concomitant NSAIDs without gastroprotection."}`,
+      code: `def compress_state_delta(delta: dict) -> str:\n    # Top-1% sparsification + FP16 packing with error feedback residual\n    pass\n\ndef rank_devices(raw_nodes: list) -> list:\n    # Sort free LAN machines by capacity_score descending\n    pass`
+    };
+
+    window.loadSampleCorpus = function(kind) {
+      document.getElementById('feedTextInput').value = sampleCorpora[kind] || sampleCorpora.llm;
+      document.getElementById('feedDatasetName').value = `atharva-${kind}-corpus`;
+    };
+
+    document.getElementById('feedFileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById('feedDatasetName').value = file.name.replace(/\.[^.]+$/, '');
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        document.getElementById('feedTextInput').value = String(ev.target.result || '').slice(0, 8000);
+        logEvent('FEEDER', '#00f0ff', `Loaded file "${file.name}" (${file.size.toLocaleString()} bytes) into Main Interface Feeder`);
+      };
+      reader.readAsText(file);
+    });
+
+    function createAndDispatchBatches(dsName, rawText, count) {
+      rankAllDevices();
+      activeDatasetName = dsName;
+      const selectedNodes = devices.filter((d) => d.selected);
+      const tokenEst = Math.max(512, rawText.length * 4);
+      const perBatchTokens = Math.round(tokenEst / count);
+
+      fedBatches = [];
+      for (let i = 0; i < count; i++) {
+        const assignedNode = selectedNodes.length > 0 ? selectedNodes[i % selectedNodes.length] : null;
+        const isImmediate = assignedNode && i < selectedNodes.length;
+        const batchId = `${dsName}_batch_${String(i + 1).padStart(2, '0')}.npy`;
+        fedBatches.push({
+          index: i + 1,
+          total: count,
+          batchId,
+          tokens: perBatchTokens,
+          status: isImmediate ? 'TRAINING' : 'QUEUED', // 'QUEUED' | 'TRAINING' | 'AGGREGATED'
+          assignedRank: assignedNode ? assignedNode.rank : null,
+          assignedHost: assignedNode ? assignedNode.hostname.split(' ')[0] : 'Waiting'
+        });
+
+        if (isImmediate) {
+          assignedNode.shardId = `${batchId} (Batch ${i + 1}/${count})`;
+          assignedNode.phase = 'LOADING';
+          assignedNode.phaseProgress = 0.1;
+        }
+      }
+
+      document.getElementById('finalModelStatusTitle').textContent =
+        `⏳ TRAINING IN PROGRESS: Collecting ${count} Batches into Aggregator...`;
+      document.getElementById('finalModelStatusTitle').style.color = 'var(--amber)';
+      document.getElementById('finalModelStatusSub').textContent =
+        `Dataset "${dsName}" (${tokenEst.toLocaleString()} tokens) split into ${count} batches across Top-${selectedNodes.length} ranked machines`;
+
+      logEvent(
+        'FEEDER',
+        '#00f0ff',
+        `Fed dataset "${dsName}" (${tokenEst.toLocaleString()} tokens) -> split into ${count} batches & dispatched to Ranked PCs`
+      );
+      renderBatchPipeline();
+      renderDeviceCards();
+    }
+
+    function renderBatchPipeline() {
+      const grid = document.getElementById('batchPipelineGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const doneCount = fedBatches.filter((b) => b.status === 'AGGREGATED').length;
+      const total = fedBatches.length || 1;
+      const pct = Math.round((doneCount / total) * 100);
+
+      document.getElementById('batchQueueSummary').textContent =
+        `Active Dataset: ${activeDatasetName} (${total} Batches Dispatched Across Ranked PCs)`;
+      document.getElementById('batchReturnCounter').textContent =
+        `Returned to Aggregator: ${doneCount} / ${total} Batches (${pct}%)`;
+      document.getElementById('batchAggregateProgressBar').style.width = `${pct}%`;
+
+      fedBatches.forEach((b) => {
+        const div = document.createElement('div');
+        const cls = b.status === 'AGGREGATED' ? 'done' : (b.status === 'TRAINING' ? 'training' : 'queued');
+        div.className = `batch-chip ${cls}`;
+        const badgeColor = b.status === 'AGGREGATED' ? 'var(--emerald)' : (b.status === 'TRAINING' ? 'var(--cyan)' : 'var(--amber)');
+        div.innerHTML = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <strong style="color:var(--text-0);">Batch #${b.index}/${b.total}</strong>
+            <span style="color:${badgeColor}; font-weight:700;">${b.status}</span>
+          </div>
+          <div style="color:var(--text-1); font-size:0.68rem;">
+            ${b.status === 'AGGREGATED' ? `✓ Merged in Aggregator` : `Rank #${b.assignedRank} (${b.assignedHost})`}
+          </div>
+          <div style="color:var(--text-2); font-size:0.66rem; margin-top:2px;">
+            ${b.tokens.toLocaleString()} tokens · ${b.batchId.slice(0, 22)}
+          </div>
+        `;
+        grid.appendChild(div);
+      });
+    }
+
+    // Hook into periodic step progression to advance fedBatches from TRAINING -> AGGREGATED
+    setInterval(() => {
+      if (paused || fedBatches.length === 0) return;
+      const activeBatch = fedBatches.find((b) => b.status === 'TRAINING');
+      if (activeBatch && Math.random() < 0.35) {
+        activeBatch.status = 'AGGREGATED';
+        logEvent(
+          'BATCH-RETURN',
+          '#10b981',
+          `Batch #${activeBatch.index}/${activeBatch.total} trained on Rank #${activeBatch.assignedRank} (${activeBatch.assignedHost}) -> returned to Aggregator!`
+        );
+
+        // Promote next QUEUED batch onto a ranked machine
+        const nextQueued = fedBatches.find((b) => b.status === 'QUEUED');
+        const selectedNodes = devices.filter((d) => d.selected);
+        if (nextQueued && selectedNodes.length > 0) {
+          const targetNode = selectedNodes[nextQueued.index % selectedNodes.length];
+          nextQueued.status = 'TRAINING';
+          nextQueued.assignedRank = targetNode.rank;
+          nextQueued.assignedHost = targetNode.hostname.split(' ')[0];
+          targetNode.shardId = `${nextQueued.batchId} (Batch ${nextQueued.index}/${nextQueued.total})`;
+          targetNode.phase = 'TRAINING';
+          targetNode.phaseProgress = 0.15;
+        }
+
+        const allDone = fedBatches.every((b) => b.status === 'AGGREGATED');
+        if (allDone) {
+          triggerGlobalMerge();
+          document.getElementById('finalModelStatusTitle').textContent =
+            `🎉 ALL ${fedBatches.length} BATCHES AGGREGATED → FINAL MODEL READY: final_model_v${modelVersion}.pt`;
+          document.getElementById('finalModelStatusTitle').style.color = 'var(--emerald)';
+          document.getElementById('finalModelStatusSub').textContent =
+            `Dataset "${activeDatasetName}" fully trained across ranked machines & merged into final_model_v${modelVersion}.pt`;
+          logEvent(
+            'FINAL-MODEL',
+            '#a78bfa',
+            `All ${fedBatches.length} batches from "${activeDatasetName}" returned to Aggregator -> built final_model_v${modelVersion}.pt!`
+          );
+        }
+        renderBatchPipeline();
+      }
+    }, 1600);
+
+    document.getElementById('dispatchBatchesBtn').addEventListener('click', () => {
+      const dsName = document.getElementById('feedDatasetName').value.trim() || 'atharva-custom-v1';
+      const rawText = document.getElementById('feedTextInput').value.trim() || 'sample training text';
+      const count = parseInt(document.getElementById('feedBatchCountSelect').value, 10) || 6;
+      createAndDispatchBatches(dsName, rawText, count);
+    });
+
+    document.getElementById('downloadFinalModelBtn').addEventListener('click', () => {
+      const checkpointManifest = {
+        platform: 'atharva.ai',
+        version: '0.1.0',
+        checkpoint_file: `final_model_v${modelVersion}.pt`,
+        dataset_trained: activeDatasetName,
+        batches_aggregated: fedBatches.length,
+        final_global_loss: globalLoss,
+        outer_lr: 0.7,
+        compression: 'Top-1% FP16 + Error Feedback Residual',
+        contributing_ranked_nodes: devices.filter((d) => d.selected).map((d) => ({
+          rank: d.rank,
+          hostname: d.hostname,
+          ip: d.ip,
+          accelerator: d.gpuName,
+          capacity_score: d.score
+        })),
+        timestamp: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(checkpointManifest, null, 2)], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `final_model_v${modelVersion}.pt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      logEvent('DOWNLOAD', '#00f0ff', `Downloaded unified final model checkpoint final_model_v${modelVersion}.pt to this machine`);
+    });
+
+    // Initialize default 6 batches on load
+    createAndDispatchBatches(
+      'atharva-custom-v1',
+      document.getElementById('feedTextInput').value,
+      6
+    );
     renderDeviceCards();
   </script>
 </body>

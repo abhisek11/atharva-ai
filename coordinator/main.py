@@ -29,8 +29,9 @@ from shared.version import VERSION
 from coordinator.license import LicenseError, check_gpu_count, load_and_verify
 from coordinator.scanner import get_local_subnet, rank_devices, scan_lan_devices
 from shared.schemas import (
-    AckResponse, GradientUpload, HeartbeatRequest, NetworkScanResponse,
-    RankedNode, RegisterRequest, RegisterResponse, WorkItem, compute_capacity_score,
+    AckResponse, DataFeedRequest, DataFeedResponse, GradientUpload,
+    HeartbeatRequest, NetworkScanResponse, RankedNode, RegisterRequest,
+    RegisterResponse, WorkItem, compute_capacity_score,
 )
 
 LEASE_SECONDS = int(os.getenv("LEASE_SECONDS", "600"))
@@ -226,8 +227,66 @@ def scan_and_rank_network(top_k: Optional[int] = Query(default=None)):
     )
 
 
+@app.post("/feed", response_model=DataFeedResponse)
+def feed_training_data(req: DataFeedRequest):
+    """Receive training data from the main interface, split it into batches,
+    and enqueue each batch in Redis (`jobs:pending`) so ranked machines can
+    pull, train, and return gradients to the aggregator."""
+    import json as _json
+    dataset_id = f"ds-{uuid.uuid4().hex[:8]}"
+    raw_bytes = req.raw_text.encode("utf-8", errors="ignore")
+    # Convert text into token IDs (0..50256)
+    tokens = [int(b) for b in raw_bytes] if raw_bytes else [0] * 1024
+    num_batches = max(1, req.num_batches)
+    chunk_size = max(1, len(tokens) // num_batches)
+
+    job_ids: List[str] = []
+    for idx in range(num_batches):
+        start = idx * chunk_size
+        end = len(tokens) if idx == num_batches - 1 else (idx + 1) * chunk_size
+        batch_tokens = tokens[start:end]
+        job_id = str(uuid.uuid4())
+        r.hset(f"job:{job_id}", mapping={
+            "shard_url": f"/shard/{job_id}",
+            "dataset_name": req.dataset_name,
+            "batch_index": idx + 1,
+            "total_batches": num_batches,
+            "token_ids_json": _json.dumps(batch_tokens[:8192]),
+            "lr": req.lr,
+            "local_steps": req.local_steps,
+            "batch_size": 8,
+        })
+        r.rpush("jobs:pending", job_id)
+        job_ids.append(job_id)
+
+    return DataFeedResponse(
+        dataset_id=dataset_id,
+        dataset_name=req.dataset_name,
+        total_tokens=len(tokens),
+        batches_created=num_batches,
+        job_ids=job_ids,
+    )
+
+
+@app.get("/shard/{job_id}")
+def get_shard_batch(job_id: str):
+    """Serve the fed data batch for a specific job_id."""
+    import json as _json
+    job = r.hgetall(f"job:{job_id}")
+    if not job:
+        raise HTTPException(404, "shard job not found")
+    return {
+        "job_id": job_id,
+        "dataset_name": job.get("dataset_name", "default"),
+        "batch_index": int(job.get("batch_index", 1)),
+        "total_batches": int(job.get("total_batches", 1)),
+        "token_ids": _json.loads(job.get("token_ids_json", "[]")),
+    }
+
+
 @app.get("/work/{worker_id}", response_model=WorkItem)
 def get_work(worker_id: str, x_token: str = Header()):
+    import json as _json
     _auth(worker_id, x_token)
     _reclaim_expired_leases()
 
@@ -250,14 +309,19 @@ def get_work(worker_id: str, x_token: str = Header()):
 
     # Scale batch_size and local_steps to the device's ranked capacity
     bs = node_entry.assigned_batch_size if node_entry else int(job.get("batch_size", 8))
-    steps = node_entry.assigned_local_steps if node_entry else LOCAL_STEPS
+    steps = node_entry.assigned_local_steps if node_entry else int(job.get("local_steps", LOCAL_STEPS))
     rank_num = node_entry.rank if node_entry else 1
     score = node_entry.capacity_score if node_entry else 0.0
+    inline_tokens = _json.loads(job["token_ids_json"]) if "token_ids_json" in job else None
 
     return WorkItem(
         job_id=job_id,
         model_version=int(r.get("model:version") or 0),
         shard_url=job["shard_url"],
+        dataset_name=job.get("dataset_name", "default"),
+        batch_index=int(job.get("batch_index", 1)),
+        total_batches=int(job.get("total_batches", 1)),
+        token_ids=inline_tokens,
         local_steps=steps,
         lr=float(job.get("lr", 3e-4)),
         batch_size=bs,
