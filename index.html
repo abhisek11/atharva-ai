@@ -727,6 +727,7 @@
       </a>
       <nav class="nav-links">
         <a href="#topology">Live Topology</a>
+        <a href="#lan-ranker">LAN Scanner &amp; Ranker</a>
         <a href="#compression">100× Delta Compression</a>
         <a href="#bandwidth">Bandwidth Math</a>
         <a href="#terminals">Live Logs</a>
@@ -807,6 +808,49 @@
             <div class="metric-value" id="metricDeltas">3 queued</div>
             <div class="metric-sub" id="metricWindow">Next window in 14s (OUTER_LR=0.7)</div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERACTIVE MOTION GRAPHIC #1.5: LAN AUTO-SCANNER & CAPACITY RANKER -->
+    <section id="lan-ranker">
+      <div class="section-header">
+        <div class="eyebrow">coordinator/scanner.py · cli/scan.py · UDP Port 49152</div>
+        <h2>Scan Same-Network PCs &amp; Laptops, Filter Free Nodes &amp; Rank by Maximum Capacity</h2>
+        <p style="color: var(--text-1);">
+          Broadcasts <code>ATHARVA_SCAN_V1</code> across your local subnet (<code>192.168.31.0/24</code>), probes free GPU VRAM, TPU memory, and system RAM, filters out busy machines, and ranks free devices from <strong>Rank #1 (maximum capacity)</strong> downward.
+        </p>
+      </div>
+
+      <div class="panel">
+        <div class="stage-toolbar" style="margin-bottom: 18px;">
+          <div class="stage-title">
+            <span class="pulse-dot"></span>
+            <span id="scanStatusLabel">SUBNET 192.168.31.0/24 · 6 DEVICES DISCOVERED · 5 FREE · TOP 4 SELECTED IN RANKS</span>
+          </div>
+          <div class="stage-controls">
+            <button class="chip-btn active" id="runLanScanBtn">📡 Scan LAN &amp; Re-Rank Devices</button>
+            <button class="chip-btn" id="toggleBusyNodeBtn">🔄 Toggle Busy State on RTX 3080</button>
+          </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: 0.8rem; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border); color: var(--text-2); font-size: 0.72rem; text-transform: uppercase;">
+                <th style="padding: 12px 10px;">Rank</th>
+                <th style="padding: 12px 10px;">Status</th>
+                <th style="padding: 12px 10px;">PC / Laptop (LAN IP)</th>
+                <th style="padding: 12px 10px;">Accelerator / CPU</th>
+                <th style="padding: 12px 10px;">Free VRAM</th>
+                <th style="padding: 12px 10px;">Free RAM</th>
+                <th style="padding: 12px 10px;">Load</th>
+                <th style="padding: 12px 10px;">Capacity Score</th>
+                <th style="padding: 12px 10px;">Assigned Workload</th>
+              </tr>
+            </thead>
+            <tbody id="lanRankTableBody"></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -1489,6 +1533,94 @@
       document.getElementById(id).addEventListener('input', updateCalculator);
     });
     updateCalculator();
+
+    // =========================================================================
+    // LAN SCANNER & CAPACITY RANKER SIMULATION (MATCHES shared/schemas.py)
+    // =========================================================================
+    const lanDevices = [
+      { hostname: 'rtx4090-rig', ip: '192.168.31.70', dev: 'cuda', gpu: 'NVIDIA GeForce RTX 4090', vramTotal: 24.0, vramFree: 22.4, ramFree: 51.0, cores: 24, load: 5, isFree: true },
+      { hostname: 'macbook-m3-max', ip: '192.168.31.84', dev: 'mps', gpu: 'Apple M3 Max Unified GPU', vramTotal: 36.0, vramFree: 24.0, ramFree: 24.0, cores: 14, load: 10, isFree: true },
+      { hostname: 'tpu-node-02', ip: '192.168.31.77', dev: 'tpu', gpu: 'Cloud TPU v5e Pod Slice', vramTotal: 16.0, vramFree: 15.2, ramFree: 26.0, cores: 16, load: 4, isFree: true },
+      { hostname: 'abhisek', ip: '192.168.31.182', dev: 'cuda', gpu: 'NVIDIA GeForce GTX 1650', vramTotal: 4.0, vramFree: 2.7, ramFree: 4.3, cores: 8, load: 22, isFree: true },
+      { hostname: 'thinkpad-ryzen7', ip: '192.168.31.91', dev: 'cpu', gpu: 'CPU (AMD Ryzen 7 7840U)', vramTotal: 0.0, vramFree: 0.0, ramFree: 21.5, cores: 16, load: 15, isFree: true },
+      { hostname: 'rtx3080-desktop', ip: '192.168.31.98', dev: 'cuda', gpu: 'NVIDIA GeForce RTX 3080', vramTotal: 10.0, vramFree: 1.1, ramFree: 8.4, cores: 16, load: 94, isFree: false }
+    ];
+
+    function computeScore(d) {
+      const accelBonus = (d.dev === 'cuda' || d.dev === 'tpu') ? 50.0 : (d.dev === 'mps' ? 25.0 : 0.0);
+      const raw = accelBonus + (d.vramFree * 12.0) + (d.ramFree * 2.5) + (d.cores * 1.5);
+      const headroom = Math.max(0.1, 1.0 - (d.load / 100.0) * 0.7);
+      const mult = d.isFree ? 1.0 : 0.15;
+      return +(raw * headroom * mult).toFixed(1);
+    }
+
+    function renderLanRankTable() {
+      const scored = lanDevices.map((d) => ({ ...d, score: computeScore(d) }));
+      scored.sort((a, b) => {
+        if (a.isFree !== b.isFree) return a.isFree ? -1 : 1;
+        return b.score - a.score;
+      });
+
+      const tbody = document.getElementById('lanRankTableBody');
+      tbody.innerHTML = '';
+      let freeCount = 0;
+
+      scored.forEach((d, idx) => {
+        const rank = idx + 1;
+        if (d.isFree) freeCount++;
+        const selected = d.isFree && freeCount <= 4;
+        const bs = !selected ? 0 : (d.score >= 250 ? 16 : (d.score >= 85 ? 8 : 4));
+        const steps = !selected ? 0 : (d.score >= 250 ? 250 : (d.score >= 85 ? 160 : 100));
+
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid rgba(148, 163, 184, 0.1)';
+        tr.innerHTML = `
+          <td style="padding: 12px 10px; font-weight: 700; color: ${selected ? 'var(--cyan)' : 'var(--text-2)'};">#${rank}</td>
+          <td style="padding: 12px 10px;">
+            <span style="padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; background: ${d.isFree ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)'}; color: ${d.isFree ? 'var(--emerald)' : 'var(--rose)'};">
+              ${d.isFree ? 'FREE' : 'BUSY'}
+            </span>
+          </td>
+          <td style="padding: 12px 10px; color: var(--text-0);">${d.hostname} <span style="color: var(--text-2);">(${d.ip})</span></td>
+          <td style="padding: 12px 10px; color: var(--text-1);">${d.gpu}</td>
+          <td style="padding: 12px 10px; color: var(--cyan);">${d.vramTotal > 0 ? `${d.vramFree.toFixed(1)} / ${d.vramTotal} GB` : 'N/A (RAM)'}</td>
+          <td style="padding: 12px 10px;">${d.ramFree.toFixed(1)} GB</td>
+          <td style="padding: 12px 10px; color: ${d.load > 80 ? 'var(--rose)' : 'var(--emerald)'};">${d.load}%</td>
+          <td style="padding: 12px 10px; font-weight: 700; color: var(--text-0);">${d.score}</td>
+          <td style="padding: 12px 10px; color: ${selected ? 'var(--emerald)' : 'var(--text-2)'};">
+            ${selected ? `✓ SELECTED (bs=${bs}, steps=${steps})` : 'SKIPPED'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('scanStatusLabel').textContent =
+        `SUBNET 192.168.31.0/24 · ${scored.length} DEVICES DISCOVERED · ${freeCount} FREE · TOP 4 SELECTED IN RANKS`;
+    }
+    renderLanRankTable();
+
+    document.getElementById('runLanScanBtn').addEventListener('click', () => {
+      lanDevices.forEach((d) => {
+        if (d.isFree) {
+          d.load = Math.max(3, Math.min(45, d.load + Math.floor(Math.random() * 11) - 5));
+        }
+      });
+      renderLanRankTable();
+      appendCoordLog(`<span class="c-cyan">[scanner]</span> UDP 49152 broadcast on 192.168.31.0/24 -> ranked ${lanDevices.length} nodes by free capacity`);
+    });
+
+    document.getElementById('toggleBusyNodeBtn').addEventListener('click', () => {
+      const rtx3080 = lanDevices.find((d) => d.hostname === 'rtx3080-desktop');
+      rtx3080.isFree = !rtx3080.isFree;
+      rtx3080.load = rtx3080.isFree ? 8 : 94;
+      rtx3080.vramFree = rtx3080.isFree ? 9.2 : 1.1;
+      renderLanRankTable();
+      appendCoordLog(
+        rtx3080.isFree
+          ? `<span class="c-emerald">[scanner]</span> rtx3080-desktop is now FREE (9.2GB VRAM free) -> promoted to Rank #4`
+          : `<span class="c-amber">[scanner]</span> rtx3080-desktop became BUSY (94% GPU load) -> demoted & skipped`
+      );
+    });
 
     // =========================================================================
     // LIVE TERMINAL LOG SIMULATION
