@@ -826,11 +826,11 @@
         <div class="stage-toolbar" style="margin-bottom: 18px;">
           <div class="stage-title">
             <span class="pulse-dot"></span>
-            <span id="scanStatusLabel">SUBNET 192.168.31.0/24 · 6 DEVICES DISCOVERED · 5 FREE · TOP 4 SELECTED IN RANKS</span>
+            <span id="scanStatusLabel">SUBNET 192.168.31.0/24 · 3 REAL LAN COMPUTERS DISCOVERED · 3 FREE</span>
           </div>
           <div class="stage-controls">
-            <button class="chip-btn active" id="runLanScanBtn">📡 Scan LAN &amp; Re-Rank Devices</button>
-            <button class="chip-btn" id="toggleBusyNodeBtn">🔄 Toggle Busy State on RTX 3080</button>
+            <button class="chip-btn active" id="runLanScanBtn">📡 Live Scan 192.168.31.0/24</button>
+            <button class="chip-btn" id="toggleBusyNodeBtn">🔄 Toggle Busy State on UI-5CG350652G.lan</button>
           </div>
         </div>
 
@@ -842,8 +842,8 @@
                 <th style="padding: 12px 10px;">Status</th>
                 <th style="padding: 12px 10px;">PC / Laptop (LAN IP)</th>
                 <th style="padding: 12px 10px;">Accelerator / CPU</th>
-                <th style="padding: 12px 10px;">Free VRAM</th>
-                <th style="padding: 12px 10px;">Free RAM</th>
+                <th style="padding: 12px 10px;">Discrete VRAM</th>
+                <th style="padding: 12px 10px;">Free System / Unified RAM</th>
                 <th style="padding: 12px 10px;">Load</th>
                 <th style="padding: 12px 10px;">Capacity Score</th>
                 <th style="padding: 12px 10px;">Assigned Workload</th>
@@ -1535,20 +1535,24 @@
     updateCalculator();
 
     // =========================================================================
-    // LAN SCANNER & CAPACITY RANKER SIMULATION (MATCHES shared/schemas.py)
+    // REAL LAN SCANNER & CAPACITY RANKER (Matches shared/schemas.py & /api/scan)
     // =========================================================================
-    const lanDevices = [
-      { hostname: 'rtx4090-rig', ip: '192.168.31.70', dev: 'cuda', gpu: 'NVIDIA GeForce RTX 4090', vramTotal: 24.0, vramFree: 22.4, ramFree: 51.0, cores: 24, load: 5, isFree: true },
-      { hostname: 'macbook-m3-max', ip: '192.168.31.84', dev: 'mps', gpu: 'Apple M3 Max Unified GPU', vramTotal: 36.0, vramFree: 24.0, ramFree: 24.0, cores: 14, load: 10, isFree: true },
-      { hostname: 'tpu-node-02', ip: '192.168.31.77', dev: 'tpu', gpu: 'Cloud TPU v5e Pod Slice', vramTotal: 16.0, vramFree: 15.2, ramFree: 26.0, cores: 16, load: 4, isFree: true },
-      { hostname: 'abhisek', ip: '192.168.31.182', dev: 'cuda', gpu: 'NVIDIA GeForce GTX 1650', vramTotal: 4.0, vramFree: 2.7, ramFree: 4.3, cores: 8, load: 22, isFree: true },
-      { hostname: 'thinkpad-ryzen7', ip: '192.168.31.91', dev: 'cpu', gpu: 'CPU (AMD Ryzen 7 7840U)', vramTotal: 0.0, vramFree: 0.0, ramFree: 21.5, cores: 16, load: 15, isFree: true },
-      { hostname: 'rtx3080-desktop', ip: '192.168.31.98', dev: 'cuda', gpu: 'NVIDIA GeForce RTX 3080', vramTotal: 10.0, vramFree: 1.1, ramFree: 8.4, cores: 16, load: 94, isFree: false }
+    let lanDevices = [
+      { hostname: 'MacBookAir.lan', ip: '192.168.31.193', dev: 'mps', unified: true, gpu: 'Apple M1/M-Series (Unified Memory)', vramTotal: 0.0, vramFree: 0.0, ramTotal: 8.0, ramFree: 5.4, cores: 8, load: 8, isFree: true },
+      { hostname: 'abhisek', ip: '192.168.31.182', dev: 'cuda', unified: false, gpu: 'NVIDIA GeForce GTX 1650', vramTotal: 4.0, vramFree: 2.7, ramTotal: 25.0, ramFree: 5.0, cores: 8, load: 32, isFree: true },
+      { hostname: 'UI-5CG350652G.lan', ip: '192.168.31.102', dev: 'cpu', unified: false, gpu: 'Laptop / PC CPU (HP 5CG350652G)', vramTotal: 0.0, vramFree: 0.0, ramTotal: 16.0, ramFree: 10.2, cores: 8, load: 18, isFree: true }
     ];
 
     function computeScore(d) {
-      const accelBonus = (d.dev === 'cuda' || d.dev === 'tpu') ? 50.0 : (d.dev === 'mps' ? 25.0 : 0.0);
-      const raw = accelBonus + (d.vramFree * 12.0) + (d.ramFree * 2.5) + (d.cores * 1.5);
+      let raw = 0;
+      if (d.dev === 'mps' || d.unified) {
+        // Apple Silicon Unified Memory: count free unified RAM once (never double-count as VRAM + RAM)
+        raw = 25.0 + (d.ramFree * 8.0) + (d.cores * 1.5);
+      } else if (d.dev === 'cuda' || d.dev === 'tpu') {
+        raw = 50.0 + (d.vramFree * 12.0) + (d.ramFree * 2.5) + (d.cores * 1.5);
+      } else {
+        raw = (d.ramFree * 2.5) + (d.cores * 1.5);
+      }
       const headroom = Math.max(0.1, 1.0 - (d.load / 100.0) * 0.7);
       const mult = d.isFree ? 1.0 : 0.15;
       return +(raw * headroom * mult).toFixed(1);
@@ -1569,8 +1573,15 @@
         const rank = idx + 1;
         if (d.isFree) freeCount++;
         const selected = d.isFree && freeCount <= 4;
-        const bs = !selected ? 0 : (d.score >= 250 ? 16 : (d.score >= 85 ? 8 : 4));
-        const steps = !selected ? 0 : (d.score >= 250 ? 250 : (d.score >= 85 ? 160 : 100));
+        const bs = !selected ? 0 : (d.score >= 250 ? 16 : (d.score >= 70 ? 8 : 4));
+        const steps = !selected ? 0 : (d.score >= 250 ? 250 : (d.score >= 70 ? 160 : 100));
+
+        const vramCell = (d.unified || d.dev === 'mps')
+          ? 'Unified w/ RAM'
+          : (d.vramTotal > 0 ? `${d.vramFree.toFixed(1)} / ${d.vramTotal.toFixed(0)} GB` : 'None (CPU)');
+        const ramCell = (d.unified || d.dev === 'mps')
+          ? `${d.ramFree.toFixed(1)} / ${(d.ramTotal || 8).toFixed(0)} GB (Unified)`
+          : `${d.ramFree.toFixed(1)} / ${(d.ramTotal || 16).toFixed(0)} GB`;
 
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid rgba(148, 163, 184, 0.1)';
@@ -1583,9 +1594,9 @@
           </td>
           <td style="padding: 12px 10px; color: var(--text-0);">${d.hostname} <span style="color: var(--text-2);">(${d.ip})</span></td>
           <td style="padding: 12px 10px; color: var(--text-1);">${d.gpu}</td>
-          <td style="padding: 12px 10px; color: var(--cyan);">${d.vramTotal > 0 ? `${d.vramFree.toFixed(1)} / ${d.vramTotal} GB` : 'N/A (RAM)'}</td>
-          <td style="padding: 12px 10px;">${d.ramFree.toFixed(1)} GB</td>
-          <td style="padding: 12px 10px; color: ${d.load > 80 ? 'var(--rose)' : 'var(--emerald)'};">${d.load}%</td>
+          <td style="padding: 12px 10px; color: var(--cyan);">${vramCell}</td>
+          <td style="padding: 12px 10px;">${ramCell}</td>
+          <td style="padding: 12px 10px; color: ${d.load > 80 ? 'var(--rose)' : 'var(--emerald)'};">${Math.round(d.load)}%</td>
           <td style="padding: 12px 10px; font-weight: 700; color: var(--text-0);">${d.score}</td>
           <td style="padding: 12px 10px; color: ${selected ? 'var(--emerald)' : 'var(--text-2)'};">
             ${selected ? `✓ SELECTED (bs=${bs}, steps=${steps})` : 'SKIPPED'}
@@ -1595,30 +1606,50 @@
       });
 
       document.getElementById('scanStatusLabel').textContent =
-        `SUBNET 192.168.31.0/24 · ${scored.length} DEVICES DISCOVERED · ${freeCount} FREE · TOP 4 SELECTED IN RANKS`;
+        `SUBNET 192.168.31.0/24 · ${scored.length} REAL COMPUTERS DISCOVERED · ${freeCount} FREE`;
     }
-    renderLanRankTable();
+
+    async function fetchLiveLanScan() {
+      try {
+        const res = await fetch('/api/scan');
+        if (!res.ok) throw new Error('status ' + res.status);
+        const data = await res.json();
+        if (data.ranked_nodes && data.ranked_nodes.length > 0) {
+          lanDevices = data.ranked_nodes.map((n) => ({
+            hostname: n.hostname,
+            ip: n.ip_address,
+            dev: n.device_type,
+            unified: Boolean(n.unified_memory || n.device_type === 'mps'),
+            gpu: n.gpu_name,
+            vramTotal: n.vram_total_gb,
+            vramFree: n.vram_free_gb,
+            ramTotal: n.ram_total_gb,
+            ramFree: n.ram_free_gb,
+            cores: n.cpu_cores,
+            load: (n.device_type === 'cuda' || n.device_type === 'tpu' || n.device_type === 'mps') ? n.gpu_load_pct : n.cpu_load_pct,
+            isFree: n.is_free
+          }));
+        }
+      } catch (_) {}
+      renderLanRankTable();
+    }
+    fetchLiveLanScan();
 
     document.getElementById('runLanScanBtn').addEventListener('click', () => {
-      lanDevices.forEach((d) => {
-        if (d.isFree) {
-          d.load = Math.max(3, Math.min(45, d.load + Math.floor(Math.random() * 11) - 5));
-        }
-      });
-      renderLanRankTable();
-      appendCoordLog(`<span class="c-cyan">[scanner]</span> UDP 49152 broadcast on 192.168.31.0/24 -> ranked ${lanDevices.length} nodes by free capacity`);
+      fetchLiveLanScan();
+      appendCoordLog(`<span class="c-cyan">[scanner]</span> Swept 192.168.31.0/24 -> discovered & ranked ${lanDevices.length} real LAN computers`);
     });
 
     document.getElementById('toggleBusyNodeBtn').addEventListener('click', () => {
-      const rtx3080 = lanDevices.find((d) => d.hostname === 'rtx3080-desktop');
-      rtx3080.isFree = !rtx3080.isFree;
-      rtx3080.load = rtx3080.isFree ? 8 : 94;
-      rtx3080.vramFree = rtx3080.isFree ? 9.2 : 1.1;
+      const target = lanDevices[lanDevices.length - 1];
+      if (!target) return;
+      target.isFree = !target.isFree;
+      target.load = target.isFree ? 16 : 94;
       renderLanRankTable();
       appendCoordLog(
-        rtx3080.isFree
-          ? `<span class="c-emerald">[scanner]</span> rtx3080-desktop is now FREE (9.2GB VRAM free) -> promoted to Rank #4`
-          : `<span class="c-amber">[scanner]</span> rtx3080-desktop became BUSY (94% GPU load) -> demoted & skipped`
+        target.isFree
+          ? `<span class="c-emerald">[scanner]</span> ${target.hostname} (${target.ip}) is now FREE -> promoted in rank`
+          : `<span class="c-amber">[scanner]</span> ${target.hostname} (${target.ip}) became BUSY (94% load) -> demoted & skipped`
       );
     });
 

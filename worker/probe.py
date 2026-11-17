@@ -2,7 +2,7 @@
 
 Measures:
   - Accelerator type: CUDA GPU, Google Cloud TPU (torch_xla), Apple MPS, or CPU/RAM
-  - Total & Free VRAM (GB)
+  - Discrete VRAM (GB) vs Unified Memory (Apple Silicon M1/M2/M3/M4 — never double-counted)
   - Total & Free System RAM (GB)
   - Logical CPU cores & current CPU load (%)
   - Current GPU utilization (%)
@@ -44,7 +44,8 @@ def get_lan_ip() -> str:
 
 
 def _read_system_ram_gb() -> tuple[float, float]:
-    """Return (ram_total_gb, ram_free_gb) without requiring external packages."""
+    """Return (ram_total_gb, ram_free_gb) across Linux and macOS without external deps."""
+    # Linux /proc/meminfo
     try:
         if os.path.exists("/proc/meminfo"):
             info = {}
@@ -60,6 +61,31 @@ def _read_system_ram_gb() -> tuple[float, float]:
             return round(total_gb, 2), round(avail_gb, 2)
     except Exception:
         pass
+
+    # macOS sysctl + vm_stat
+    if platform.system() == "Darwin":
+        try:
+            mem_bytes = int(
+                subprocess.run(
+                    ["sysctl", "-n", "hw.memsize"],
+                    capture_output=True, text=True, timeout=2
+                ).stdout.strip()
+            )
+            total_gb = mem_bytes / (1024 ** 3)
+            vm_out = subprocess.run(
+                ["vm_stat"], capture_output=True, text=True, timeout=2
+            ).stdout
+            free_pages = 0
+            for line in vm_out.splitlines():
+                if any(k in line for k in ("Pages free", "Pages inactive", "Pages speculative")):
+                    num = line.split(":")[1].strip().rstrip(".")
+                    free_pages += int(num)
+            avail_gb = (free_pages * 16384) / (1024 ** 3)
+            if avail_gb <= 0 or avail_gb > total_gb:
+                avail_gb = total_gb * 0.65
+            return round(total_gb, 2), round(avail_gb, 2)
+        except Exception:
+            pass
 
     # Fallback via POSIX sysconf
     try:
@@ -82,8 +108,8 @@ def _read_cpu_load_pct(cores: int) -> float:
         return 10.0
 
 
-def _read_gpu_telemetry() -> tuple[str, str, float, float, float]:
-    """Return (device_type, gpu_name, vram_total_gb, vram_free_gb, gpu_load_pct)."""
+def _read_gpu_telemetry() -> tuple[str, str, float, float, float, bool]:
+    """Return (device_type, gpu_name, vram_total_gb, vram_free_gb, gpu_load_pct, unified_memory)."""
     # 1. Try nvidia-smi directly (works even if PyTorch is not installed in the current shell)
     try:
         out = subprocess.run(
@@ -102,7 +128,7 @@ def _read_gpu_telemetry() -> tuple[str, str, float, float, float]:
                 total_gb = round(float(parts[1]) / 1024.0, 2)
                 free_gb = round(float(parts[2]) / 1024.0, 2)
                 util_pct = float(parts[3])
-                return "cuda", name, total_gb, free_gb, util_pct
+                return "cuda", name, total_gb, free_gb, util_pct, False
     except Exception:
         pass
 
@@ -117,20 +143,33 @@ def _read_gpu_telemetry() -> tuple[str, str, float, float, float]:
             total_b = torch.cuda.get_device_properties(0).total_memory
             vram_total = round(total_b / 1e9, 2)
             vram_free = vram_total
-        return "cuda", gpu_name, vram_total, vram_free, 0.0
+        return "cuda", gpu_name, vram_total, vram_free, 0.0, False
 
     # 3. Check Google Cloud TPU (torch_xla)
     try:
         import torch_xla.core.xla_model as xm  # type: ignore
         dev = xm.xla_device()
-        return "tpu", f"TPU ({dev})", 16.0, 14.5, 5.0
+        return "tpu", f"TPU ({dev})", 16.0, 14.5, 5.0, False
     except Exception:
         pass
 
-    # 4. Check Apple Silicon MPS
-    if torch is not None and hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-        ram_total, ram_free = _read_system_ram_gb()
-        return "mps", "Apple Silicon Unified GPU", ram_total, ram_free, 10.0
+    # 4. Check Apple Silicon (MPS / Darwin arm64) — Unified Memory (do NOT duplicate into discrete VRAM)
+    is_apple_silicon = (
+        platform.system() == "Darwin" and platform.machine() in ("arm64", "aarch64")
+    ) or (torch is not None and hasattr(torch.backends, "mps") and torch.backends.mps.is_available())
+    if is_apple_silicon:
+        chip_name = "Apple Silicon Unified GPU"
+        try:
+            brand = subprocess.run(
+                ["sysctl", "-n", "machdep.cpu.brand_string"],
+                capture_output=True, text=True, timeout=2
+            ).stdout.strip()
+            if brand:
+                chip_name = f"{brand} (Unified Memory)"
+        except Exception:
+            pass
+        # vram_total_gb=0.0, vram_free_gb=0.0 because memory is unified with system RAM
+        return "mps", chip_name, 0.0, 0.0, 10.0, True
 
     # 5. Fallback to CPU + System RAM
     cpu_label = platform.processor() or platform.machine() or "CPU"
@@ -143,7 +182,7 @@ def _read_gpu_telemetry() -> tuple[str, str, float, float, float]:
                         break
     except Exception:
         pass
-    return "cpu", f"CPU ({cpu_label})", 0.0, 0.0, 0.0
+    return "cpu", f"CPU ({cpu_label})", 0.0, 0.0, 0.0, False
 
 
 def probe_local_device(training_active: bool = False, worker_id: str = "") -> Dict:
@@ -151,11 +190,8 @@ def probe_local_device(training_active: bool = False, worker_id: str = "") -> Di
     cores = os.cpu_count() or 1
     ram_total, ram_free = _read_system_ram_gb()
     cpu_load = _read_cpu_load_pct(cores)
-    dev_type, gpu_name, vram_total, vram_free, gpu_load = _read_gpu_telemetry()
+    dev_type, gpu_name, vram_total, vram_free, gpu_load, unified_mem = _read_gpu_telemetry()
 
-    # A device is considered FREE if it is not currently executing a training shard
-    # and its primary compute unit has ample idle headroom (<80% GPU load, <85% CPU load)
-    # and at least 0.5 GB of free RAM.
     is_free = (
         not training_active
         and gpu_load < 80.0
@@ -177,8 +213,10 @@ def probe_local_device(training_active: bool = False, worker_id: str = "") -> Di
         "worker_id": worker_id or f"lan-{platform.node()}",
         "hostname": platform.node(),
         "ip_address": get_lan_ip(),
+        "mac_address": "local",
         "device_type": dev_type,
         "gpu_name": gpu_name,
+        "unified_memory": unified_mem,
         "vram_gb": vram_total,
         "vram_total_gb": vram_total,
         "vram_free_gb": vram_free,
@@ -188,6 +226,7 @@ def probe_local_device(training_active: bool = False, worker_id: str = "") -> Di
         "cpu_load_pct": cpu_load,
         "gpu_load_pct": gpu_load,
         "is_free": is_free,
+        "agent_online": True,
         "capacity_score": score,
         "torch_version": getattr(torch, "__version__", "not-installed"),
     }

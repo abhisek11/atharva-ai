@@ -38,23 +38,29 @@ def compute_capacity_score(
     """Compute a unified capacity score so heterogeneous PCs/laptops on a LAN
     can be ranked from highest available capacity (#1) to lowest.
 
-    Formula weights:
-      - Free accelerator memory (CUDA/TPU VRAM) heavily weighted (12 pts / GB)
-      - Accelerator compute tier bonus (CUDA/TPU: +50, MPS: +25, CPU: +0)
-      - Free system RAM (2.5 pts / GB)
-      - CPU logical cores (1.5 pts / core)
-      - Idle headroom multiplier based on current GPU/CPU utilization
-      - Busy nodes (`is_free=False`) are penalized by 0.15x so free nodes always rank above busy ones.
+    Fixes unified memory double-counting:
+      - Discrete GPU/TPU (`cuda`, `tpu`): scores discrete `vram_free_gb * 12.0` +
+        host `ram_free_gb * 2.5` + accelerator bonus (`+50`).
+      - Apple Silicon (`mps`): GPU and CPU share ONE unified memory pool (`ram_free_gb`).
+        Never adds `vram_free_gb` on top of `ram_free_gb` — scores `ram_free_gb * 8.0`
+        once + unified GPU bonus (`+25`).
+      - CPU-only (`cpu`): scores `ram_free_gb * 2.5` + `cpu_cores * 1.5`.
     """
     dev = (device_type or "cpu").lower()
-    accel_bonus = 50.0 if dev in ("cuda", "tpu") else (25.0 if dev == "mps" else 0.0)
 
-    raw = (
-        accel_bonus
-        + (max(0.0, vram_free_gb) * 12.0)
-        + (max(0.0, ram_free_gb) * 2.5)
-        + (max(1, cpu_cores) * 1.5)
-    )
+    if dev == "mps":
+        # Unified memory pool: count free unified RAM once (do NOT double-count as VRAM + RAM)
+        unified_free = max(vram_free_gb, ram_free_gb)
+        raw = 25.0 + (max(0.0, unified_free) * 8.0) + (max(1, cpu_cores) * 1.5)
+    elif dev in ("cuda", "tpu"):
+        raw = (
+            50.0
+            + (max(0.0, vram_free_gb) * 12.0)
+            + (max(0.0, ram_free_gb) * 2.5)
+            + (max(1, cpu_cores) * 1.5)
+        )
+    else:
+        raw = (max(0.0, ram_free_gb) * 2.5) + (max(1, cpu_cores) * 1.5)
 
     primary_load = gpu_load_pct if dev in ("cuda", "tpu", "mps") else cpu_load_pct
     headroom = max(0.1, 1.0 - (min(100.0, max(0.0, primary_load)) / 100.0) * 0.7)
@@ -68,10 +74,11 @@ class RegisterRequest(BaseModel):
     ip_address: str = "127.0.0.1"
     device_type: str = "cpu"          # "cuda" | "tpu" | "mps" | "cpu"
     gpu_name: str
-    vram_gb: float                    # total VRAM GB (kept for backward compatibility)
-    vram_free_gb: float = 0.0         # currently free VRAM GB
-    ram_total_gb: float = 0.0         # total system RAM GB
-    ram_free_gb: float = 0.0          # currently free system RAM GB
+    vram_gb: float                    # discrete VRAM GB (0.0 for unified MPS / CPU)
+    vram_free_gb: float = 0.0         # currently free discrete VRAM GB
+    ram_total_gb: float = 0.0         # total system (or unified) RAM GB
+    ram_free_gb: float = 0.0          # currently free system (or unified) RAM GB
+    unified_memory: bool = False      # True on Apple Silicon (M1/M2/M3/M4)
     cpu_cores: int = 1
     cpu_load_pct: float = 0.0
     gpu_load_pct: float = 0.0
@@ -100,8 +107,10 @@ class RankedNode(BaseModel):
     worker_id: str
     hostname: str
     ip_address: str
+    mac_address: str = ""
     device_type: str
     gpu_name: str
+    unified_memory: bool = False
     vram_total_gb: float
     vram_free_gb: float
     ram_total_gb: float
@@ -110,6 +119,7 @@ class RankedNode(BaseModel):
     cpu_load_pct: float
     gpu_load_pct: float
     is_free: bool
+    agent_online: bool = True
     capacity_score: float
     selected_for_training: bool = True
     assigned_batch_size: int = 8
