@@ -301,6 +301,15 @@ def landing_page():
     return {"service": "atharva.ai coordinator", "version": VERSION}
 
 
+@app.get("/dashboard")
+@app.get("/dashboard.html")
+def dashboard_page():
+    dash_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dashboard.html")
+    if os.path.exists(dash_path):
+        return FileResponse(dash_path, media_type="text/html")
+    raise HTTPException(404, "dashboard.html not found")
+
+
 @app.get("/status")
 def status():
     _reclaim_expired_leases()
