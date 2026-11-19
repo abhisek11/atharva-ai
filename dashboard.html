@@ -3,29 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>atharva.ai — Live Cluster &amp; Device Training Dashboard</title>
+  <title>atharva.ai — Simple Distributed Training Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-0: #04060c;
-      --bg-1: #090d18;
-      --bg-2: #0f1629;
-      --card: rgba(13, 19, 36, 0.86);
-      --border: rgba(148, 163, 184, 0.14);
-      --border-hi: rgba(0, 240, 255, 0.42);
-      --text-0: #f8fafc;
-      --text-1: #94a3b8;
-      --text-2: #64748b;
-      --cyan: #00f0ff;
-      --emerald: #10b981;
-      --violet: #a78bfa;
-      --amber: #f59e0b;
-      --rose: #f43f5e;
-      --blue: #38bdf8;
-      --font-display: 'Space Grotesk', system-ui, sans-serif;
-      --font-sans: 'Inter', system-ui, sans-serif;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-muted: #f1f5f9;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --blue: #2563eb;
+      --blue-soft: #eff6ff;
+      --blue-border: #bfdbfe;
+      --green: #16a34a;
+      --green-soft: #f0fdf4;
+      --green-border: #bbf7d0;
+      --purple: #7c3aed;
+      --purple-soft: #f5f3ff;
+      --purple-border: #ddd6fe;
+      --amber: #d97706;
+      --amber-soft: #fffbeb;
+      --red: #dc2626;
+      --red-soft: #fef2f2;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
     }
 
@@ -36,1000 +41,795 @@
     }
 
     body {
-      background:
-        radial-gradient(circle at 12% 8%, rgba(0, 240, 255, 0.08), transparent 35%),
-        radial-gradient(circle at 88% 15%, rgba(167, 139, 250, 0.09), transparent 40%),
-        var(--bg-0);
-      color: var(--text-0);
+      background: var(--bg);
+      color: var(--text);
       font-family: var(--font-sans);
-      min-height: 100vh;
-      overflow-x: hidden;
+      line-height: 1.5;
+      padding-bottom: 64px;
     }
 
-    /* Top Control Header */
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(4, 6, 12, 0.85);
-      backdrop-filter: blur(16px);
+    /* Clean Top Bar */
+    .navbar {
+      background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 12px 24px;
+      padding: 14px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
     }
 
-    .brand-row {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .brand-logo {
+    .brand {
       display: flex;
       align-items: center;
       gap: 10px;
-      text-decoration: none;
-      color: var(--text-0);
-      font-family: var(--font-display);
       font-weight: 700;
-      font-size: 1.2rem;
+      font-size: 1.15rem;
+      color: var(--text);
+      text-decoration: none;
     }
 
-    .orb {
+    .brand-icon {
       width: 30px;
       height: 30px;
       border-radius: 8px;
-      background: linear-gradient(135deg, var(--cyan), var(--violet));
-      box-shadow: 0 0 18px rgba(0, 240, 255, 0.45);
+      background: var(--blue);
+      color: #fff;
       display: grid;
       place-items: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .subnet-tag {
       font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: #020617;
-      font-weight: 800;
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: var(--surface-muted);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
     }
 
-    .live-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 4px 12px;
-      border-radius: 999px;
-      background: rgba(16, 185, 129, 0.12);
-      border: 1px solid rgba(16, 185, 129, 0.35);
-      color: var(--emerald);
-      font-family: var(--font-mono);
-      font-size: 0.73rem;
-    }
-
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--emerald);
-      box-shadow: 0 0 10px var(--emerald);
-      animation: blink 1.6s infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.45; transform: scale(1.35); }
-    }
-
-    .top-controls {
+    .nav-actions {
       display: flex;
       align-items: center;
       gap: 10px;
-      flex-wrap: wrap;
     }
 
-    .ctrl-btn {
-      background: rgba(15, 22, 41, 0.9);
-      border: 1px solid var(--border);
-      color: var(--text-0);
-      font-family: var(--font-mono);
-      font-size: 0.76rem;
-      padding: 8px 14px;
+    .btn {
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 8px 16px;
       border-radius: 8px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
       cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.18s;
       text-decoration: none;
+      transition: all 0.15s ease;
     }
 
-    .ctrl-btn:hover {
-      border-color: var(--cyan);
-      color: var(--cyan);
-      background: rgba(0, 240, 255, 0.08);
+    .btn:hover {
+      background: var(--surface-muted);
     }
 
-    .ctrl-btn.primary {
-      background: linear-gradient(135deg, var(--cyan), #00a3ff);
-      color: #020617;
-      font-weight: 700;
-      border-color: transparent;
-      box-shadow: 0 0 22px rgba(0, 240, 255, 0.28);
+    .btn-primary {
+      background: var(--blue);
+      color: #ffffff;
+      border-color: var(--blue);
     }
 
-    .ctrl-btn.primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 0 30px rgba(0, 240, 255, 0.5);
+    .btn-primary:hover {
+      background: #1d4ed8;
     }
 
-    select.ctrl-select {
-      background: rgba(15, 22, 41, 0.95);
-      border: 1px solid var(--border);
-      color: var(--cyan);
-      font-family: var(--font-mono);
-      font-size: 0.76rem;
-      padding: 8px 12px;
-      border-radius: 8px;
-      cursor: pointer;
+    .btn-green {
+      background: var(--green);
+      color: #ffffff;
+      border-color: var(--green);
     }
 
-    /* Main Layout */
-    .dashboard-wrap {
-      max-width: 1600px;
-      margin: 0 auto;
-      padding: 20px 24px 48px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
+    .btn-green:hover {
+      background: #15803d;
     }
 
-    /* KPI Strip */
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 14px;
+    .container {
+      max-width: 1280px;
+      margin: 24px auto 0;
+      padding: 0 24px;
     }
 
-    @media (max-width: 1280px) {
-      .kpi-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-
-    @media (max-width: 700px) {
-      .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    .kpi-card {
-      background: var(--card);
+    /* Visual System Flow Map at the Top */
+    .flow-overview {
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 14px 16px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+
+    .flow-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .flow-header h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .flow-header p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .flow-diagram {
+      display: grid;
+      grid-template-columns: 1fr auto 1.2fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+    }
+
+    @media (max-width: 920px) {
+      .flow-diagram {
+        grid-template-columns: 1fr;
+      }
+      .flow-arrow {
+        transform: rotate(90deg);
+        justify-self: center;
+      }
+    }
+
+    .flow-node {
+      border-radius: 12px;
+      padding: 16px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      transition: all 0.2s;
+    }
+
+    .flow-node.coordinator {
+      border-color: var(--blue-border);
+      background: var(--blue-soft);
+    }
+
+    .flow-node.workers {
+      border-color: var(--green-border);
+      background: var(--green-soft);
+    }
+
+    .flow-node.aggregator {
+      border-color: var(--purple-border);
+      background: var(--purple-soft);
+    }
+
+    .node-step-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+
+    .coordinator .node-step-tag {
+      background: #dbeafe;
+      color: var(--blue);
+    }
+
+    .workers .node-step-tag {
+      background: #dcfce7;
+      color: var(--green);
+    }
+
+    .aggregator .node-step-tag {
+      background: #ede9fe;
+      color: var(--purple);
+    }
+
+    .flow-node h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .flow-node p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .flow-node-stat {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(15, 23, 42, 0.08);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .flow-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      gap: 4px;
+      min-width: 90px;
+      text-align: center;
+    }
+
+    .arrow-line {
+      width: 100%;
+      height: 3px;
+      background: var(--border-strong);
       position: relative;
+      border-radius: 99px;
       overflow: hidden;
     }
 
-    .kpi-card::before {
-      content: "";
+    .arrow-dot {
       position: absolute;
       top: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, var(--cyan), var(--violet));
-      opacity: 0.7;
+      left: -25%;
+      width: 35%;
+      height: 100%;
+      background: var(--blue);
+      border-radius: 99px;
+      animation: slideRight 1.6s infinite linear;
     }
 
-    .kpi-label {
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-2);
+    @keyframes slideRight {
+      0% { left: -35%; }
+      100% { left: 100%; }
     }
 
-    .kpi-val {
-      font-family: var(--font-display);
-      font-size: 1.55rem;
-      font-weight: 700;
-      margin: 4px 0 2px;
-      color: var(--text-0);
-    }
-
-    .kpi-sub {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--emerald);
-    }
-
-    /* Center Split: Left Ranked Device Cards | Right Live Assembly + Loss Chart */
-    .main-grid {
+    /* 3-Column Workspace */
+    .workspace-grid {
       display: grid;
-      grid-template-columns: 1.28fr 0.92fr;
+      grid-template-columns: 1fr 1.35fr 1fr;
       gap: 20px;
       align-items: start;
     }
 
-    @media (max-width: 1180px) {
-      .main-grid {
+    @media (max-width: 1100px) {
+      .workspace-grid {
         grid-template-columns: 1fr;
       }
     }
 
-    .panel {
-      background: var(--card);
+    .card {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 18px 20px;
-      backdrop-filter: blur(12px);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
     }
 
-    .panel-head {
+    .card-header {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      padding-bottom: 14px;
-      margin-bottom: 16px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
       border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
-      gap: 10px;
     }
 
-    .panel-title {
-      font-family: var(--font-display);
+    .card-title-group h2 {
       font-size: 1.05rem;
       font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
 
-    .panel-subtitle {
+    .card-title-group p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .step-circle {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Column 1: Coordinator Inputs */
+    .label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .textarea {
+      width: 100%;
+      height: 110px;
+      padding: 10px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
       font-family: var(--font-mono);
-      font-size: 0.74rem;
-      color: var(--text-1);
+      font-size: 0.78rem;
+      color: var(--text);
+      background: var(--bg);
+      resize: vertical;
+      margin-bottom: 12px;
     }
 
-    /* Device Cards Grid */
-    .device-list {
+    .textarea:focus {
+      outline: 2px solid var(--blue);
+      border-color: transparent;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .select, .input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      font-size: 0.84rem;
+      color: var(--text);
+    }
+
+    .batch-list {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .batch-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: 0.82rem;
+    }
+
+    .batch-tag {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 99px;
+    }
+
+    .tag-queued {
+      background: var(--amber-soft);
+      color: var(--amber);
+    }
+
+    .tag-training {
+      background: var(--blue-soft);
+      color: var(--blue);
+    }
+
+    .tag-done {
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    /* Column 2: Ranked LAN Machines */
+    .machine-list {
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
 
-    .device-card {
-      background: rgba(6, 9, 19, 0.85);
+    .machine-card {
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 15px 18px;
-      transition: all 0.22s ease;
-      position: relative;
+      border-radius: 12px;
+      padding: 14px 16px;
+      background: var(--surface);
+      transition: all 0.15s;
     }
 
-    .device-card.selected {
-      border-color: rgba(0, 240, 255, 0.35);
-      box-shadow: inset 0 0 24px rgba(0, 240, 255, 0.03);
+    .machine-card.active-rank {
+      border-color: var(--blue);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.07);
     }
 
-    .device-card.busy {
-      opacity: 0.62;
-      border-color: rgba(244, 63, 94, 0.3);
+    .machine-card.busy-machine {
+      background: var(--surface-muted);
+      opacity: 0.75;
     }
 
-    .device-top {
+    .machine-top {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+      gap: 8px;
       flex-wrap: wrap;
-      margin-bottom: 12px;
     }
 
-    .device-id-group {
+    .machine-title {
       display: flex;
       align-items: center;
-      gap: 12px;
-    }
-
-    .rank-badge {
-      font-family: var(--font-display);
+      gap: 8px;
       font-weight: 700;
       font-size: 0.95rem;
-      padding: 5px 11px;
-      border-radius: 8px;
-      background: rgba(0, 240, 255, 0.14);
-      color: var(--cyan);
-      border: 1px solid rgba(0, 240, 255, 0.35);
     }
 
-    .rank-badge.skipped {
-      background: rgba(100, 116, 139, 0.15);
-      color: var(--text-2);
-      border-color: var(--border);
-    }
-
-    .device-name {
-      font-family: var(--font-display);
+    .rank-pill {
+      background: var(--blue);
+      color: #fff;
+      font-size: 0.75rem;
       font-weight: 700;
-      font-size: 1rem;
-      color: var(--text-0);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .device-ip {
-      font-family: var(--font-mono);
-      font-size: 0.74rem;
-      color: var(--text-2);
-      font-weight: 400;
-    }
-
-    .device-hw {
-      font-family: var(--font-mono);
-      font-size: 0.76rem;
-      color: var(--violet);
-      margin-top: 2px;
-    }
-
-    .device-badges {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .state-pill {
-      font-family: var(--font-mono);
-      font-size: 0.71rem;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 999px;
-      text-transform: uppercase;
-    }
-
-    .state-loading {
-      background: rgba(56, 189, 248, 0.15);
-      color: var(--blue);
-      border: 1px solid rgba(56, 189, 248, 0.35);
-    }
-
-    .state-training {
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--emerald);
-      border: 1px solid rgba(16, 185, 129, 0.35);
-    }
-
-    .state-uploading {
-      background: rgba(167, 139, 250, 0.18);
-      color: var(--violet);
-      border: 1px solid rgba(167, 139, 250, 0.4);
-    }
-
-    .state-busy {
-      background: rgba(244, 63, 94, 0.15);
-      color: var(--rose);
-      border: 1px solid rgba(244, 63, 94, 0.35);
-    }
-
-    .state-standby {
-      background: rgba(245, 158, 11, 0.14);
-      color: var(--amber);
-      border: 1px solid rgba(245, 158, 11, 0.32);
-    }
-
-    .score-pill {
-      font-family: var(--font-mono);
-      font-size: 0.74rem;
-      padding: 4px 9px;
+      padding: 2px 8px;
       border-radius: 6px;
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-0);
-      border: 1px solid var(--border);
     }
 
-    /* Telemetry Bars inside Device Card */
-    .telemetry-row {
+    .rank-pill.inactive {
+      background: var(--text-muted);
+    }
+
+    .status-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 99px;
+    }
+
+    .status-free {
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid var(--green-border);
+    }
+
+    .status-busy {
+      background: var(--red-soft);
+      color: var(--red);
+    }
+
+    .machine-specs {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    @media (max-width: 680px) {
-      .telemetry-row {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .mini-gauge {
-      background: rgba(255, 255, 255, 0.025);
-      border: 1px solid rgba(148, 163, 184, 0.1);
-      border-radius: 8px;
+      gap: 8px;
+      background: var(--bg);
       padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      margin-bottom: 10px;
     }
 
-    .gauge-head {
+    .spec-box span {
+      display: block;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .spec-box strong {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text);
+    }
+
+    .progress-wrap {
+      margin-top: 6px;
+    }
+
+    .progress-label {
       display: flex;
       justify-content: space-between;
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      color: var(--text-1);
-      margin-bottom: 5px;
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
     }
 
-    .gauge-track {
-      height: 6px;
-      background: rgba(255, 255, 255, 0.07);
-      border-radius: 999px;
+    .progress-bar-bg {
+      height: 8px;
+      background: var(--surface-muted);
+      border-radius: 99px;
       overflow: hidden;
     }
 
-    .gauge-fill {
+    .progress-bar-fill {
       height: 100%;
-      border-radius: 999px;
+      background: var(--blue);
+      border-radius: 99px;
       transition: width 0.25s ease;
     }
 
-    /* Active Training / Loading Progress Bar */
-    .job-progress-box {
-      background: rgba(0, 0, 0, 0.35);
-      border: 1px solid rgba(148, 163, 184, 0.12);
-      border-radius: 9px;
-      padding: 9px 12px;
-    }
-
-    .job-progress-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-family: var(--font-mono);
-      font-size: 0.73rem;
-      color: var(--text-1);
-      margin-bottom: 6px;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .job-track {
-      height: 8px;
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-
-    .job-fill {
-      height: 100%;
-      border-radius: 999px;
-      transition: width 0.15s linear;
-    }
-
-    .card-actions {
+    .machine-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-top: 10px;
       padding-top: 8px;
-      border-top: 1px dashed rgba(148, 163, 184, 0.12);
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--text-2);
+      border-top: 1px solid var(--border);
+      font-size: 0.76rem;
+      color: var(--text-muted);
     }
 
-    .mini-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      color: var(--text-1);
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      padding: 4px 9px;
+    .small-btn {
+      font-size: 0.74rem;
+      padding: 4px 10px;
       border-radius: 6px;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
       cursor: pointer;
-      transition: all 0.15s;
+      color: var(--text-secondary);
+      font-weight: 500;
     }
 
-    .mini-btn:hover {
-      border-color: var(--cyan);
-      color: var(--cyan);
+    .small-btn:hover {
+      background: var(--surface-muted);
     }
 
-    /* Right Column Stack */
-    .right-stack {
+    /* Column 3: Aggregator System */
+    .agg-summary-box {
+      background: var(--purple-soft);
+      border: 1px solid var(--purple-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .agg-big-number {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--purple);
+      font-family: var(--font-mono);
+    }
+
+    .agg-returned-list {
       display: flex;
       flex-direction: column;
-      gap: 20px;
-    }
-
-    #assemblyCanvas {
-      width: 100%;
-      height: 270px;
-      display: block;
-      border-radius: 12px;
-      background: radial-gradient(circle at 50% 50%, rgba(15, 22, 41, 0.9), rgba(4, 6, 12, 0.98));
-      border: 1px solid var(--border);
-    }
-
-    .fragment-slots {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
-      margin-top: 12px;
+      margin-bottom: 16px;
     }
 
-    .frag-slot {
-      background: rgba(5, 7, 13, 0.75);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px;
-      text-align: center;
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-    }
-
-    .frag-slot strong {
-      display: block;
-      color: var(--cyan);
-      margin-bottom: 2px;
-    }
-
-    #lossCanvas {
-      width: 100%;
-      height: 210px;
-      display: block;
-      border-radius: 12px;
-      background: #050811;
-      border: 1px solid var(--border);
-    }
-
-    /* Event Log Stream */
-    .log-stream {
-      height: 210px;
-      overflow-y: auto;
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      background: #05070e;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      line-height: 1.65;
-    }
-
-    .log-entry {
-      margin-bottom: 5px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.05);
-      padding-bottom: 3px;
-    }
-
-    /* Modal for Adding Custom LAN Node */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(2, 6, 23, 0.76);
-      backdrop-filter: blur(6px);
-      display: none;
-      place-items: center;
-      z-index: 200;
-    }
-
-    .modal-backdrop.open {
-      display: grid;
-    }
-
-    .modal-card {
-      background: #0b1120;
-      border: 1px solid var(--border-hi);
-      border-radius: 16px;
-      padding: 24px;
-      width: 100%;
-      max-width: 440px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
-    }
-
-    .form-row {
-      margin-bottom: 14px;
-    }
-
-    .form-row label {
-      display: block;
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text-1);
-      margin-bottom: 5px;
-    }
-
-    .form-row input, .form-row select {
-      width: 100%;
-      padding: 9px 12px;
-      border-radius: 8px;
-      background: #050811;
-      border: 1px solid var(--border);
-      color: var(--text-0);
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
-    }
-
-    /* Data Feeder & Batch Pipeline Studio */
-    .feeder-grid {
-      display: grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap: 18px;
-      align-items: stretch;
-    }
-
-    @media (max-width: 1024px) {
-      .feeder-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .feed-textarea {
-      width: 100%;
-      height: 112px;
-      background: #050811;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      color: var(--text-0);
-      font-family: var(--font-mono);
-      font-size: 0.76rem;
-      resize: vertical;
-      margin-bottom: 10px;
-    }
-
-    .feed-textarea:focus {
-      outline: none;
-      border-color: var(--cyan);
-    }
-
-    .batch-pipeline-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-      gap: 10px;
-      margin-top: 12px;
-      max-height: 195px;
-      overflow-y: auto;
-    }
-
-    .batch-chip {
-      background: rgba(5, 8, 17, 0.9);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      transition: all 0.2s;
-    }
-
-    .batch-chip.queued {
-      border-color: rgba(245, 158, 11, 0.35);
-    }
-
-    .batch-chip.training {
-      border-color: var(--cyan);
-      box-shadow: 0 0 16px rgba(0, 240, 255, 0.14);
-    }
-
-    .batch-chip.done {
-      border-color: rgba(16, 185, 129, 0.45);
-      background: rgba(16, 185, 129, 0.06);
-    }
-
-    .final-model-banner {
-      margin-top: 14px;
-      padding: 12px 16px;
-      border-radius: 12px;
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.14), rgba(167, 139, 250, 0.14));
-      border: 1px solid rgba(16, 185, 129, 0.4);
+    .returned-item {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+
+    .final-model-box {
+      border: 2px solid var(--green-border);
+      background: var(--green-soft);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .final-model-box h3 {
+      font-size: 0.98rem;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+
+    .final-model-box p {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
     }
   </style>
 </head>
 <body>
-  <!-- TOP COMMAND BAR -->
-  <header class="topbar">
-    <div class="brand-row">
-      <a href="index.html" class="brand-logo">
-        <div class="orb">A</div>
+
+  <!-- TOP NAVBAR -->
+  <header class="navbar">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">A</div>
         <span>atharva.ai</span>
       </a>
-      <span class="live-badge">
-        <span class="dot"></span>
-        <span id="subnetBadge">LIVE CLUSTER · SUBNET 192.168.31.0/24</span>
-      </span>
+      <span class="subnet-tag" id="subnetLabel">Network: 192.168.31.0/24</span>
     </div>
 
-    <div class="top-controls">
-      <label style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-1);">
-        Rank Cut-off:
-        <select class="ctrl-select" id="topKSelect">
-          <option value="3">Choose Top 3 Ranks</option>
-          <option value="4" selected>Choose Top 4 Ranks</option>
-          <option value="5">Choose Top 5 Ranks</option>
-          <option value="99">All Free Devices</option>
-        </select>
-      </label>
-      <button class="ctrl-btn" id="scanLanBtn">📡 Scan LAN Now</button>
-      <button class="ctrl-btn" id="addNodeModalBtn">➕ Add PC / Laptop</button>
-      <button class="ctrl-btn" id="pauseBtn">⏸ Pause</button>
-      <button class="ctrl-btn primary" id="forceMergeBtn">⚡ Force Merge &amp; Load Model</button>
-      <a href="index.html" class="ctrl-btn">← Landing Page</a>
+    <div class="nav-actions">
+      <button class="btn" id="scanBtn">📡 Scan Network Devices</button>
+      <a href="index.html" class="btn">← Landing Page</a>
     </div>
   </header>
 
-  <main class="dashboard-wrap">
-    <!-- KPI TELEMETRY STRIP -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label">Unified Checkpoint</div>
-        <div class="kpi-val" id="kpiVersion">model_v42.pt</div>
-        <div class="kpi-sub" id="kpiSyncStatus">Loaded on Single Host ✓</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Ranked Free Devices</div>
-        <div class="kpi-val" id="kpiNodes">4 / 6 Active</div>
-        <div class="kpi-sub" id="kpiSkipped">1 Standby · 1 Busy Skipped</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Pooled Free VRAM / HBM</div>
-        <div class="kpi-val" id="kpiFreeVram">64.3 GB</div>
-        <div class="kpi-sub">CUDA + TPU + Unified MPS</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Pooled Free System RAM</div>
-        <div class="kpi-val" id="kpiFreeRam">126.8 GB</div>
-        <div class="kpi-sub">DDR5 / LPDDR5 Across LAN</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Global Training Loss</div>
-        <div class="kpi-val" id="kpiLoss">1.942</div>
-        <div class="kpi-sub" id="kpiLossDelta">↓ -0.48 vs v1 (Converging)</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Cluster Throughput</div>
-        <div class="kpi-val" id="kpiThroughput">18.4k tok/s</div>
-        <div class="kpi-sub">100× Top-1% FP16 Deltas</div>
-      </div>
-    </div>
+  <main class="container">
 
-    <!-- STEP 1 -> 2 -> 3: MAIN INTERFACE DATA FEEDER & BATCH DISPATCHER STUDIO -->
-    <div class="panel" style="border-color: rgba(0, 240, 255, 0.3);">
-      <div class="panel-head">
+    <!-- CLEAR 3-STEP ARCHITECTURE FLOW DIAGRAM -->
+    <section class="flow-overview">
+      <div class="flow-header">
         <div>
-          <div class="panel-title">
-            <span style="color: var(--cyan);">Step 1: Feed Training Data</span>
-            <span style="color: var(--text-2);">→</span>
-            <span style="color: var(--emerald);">Step 2: Dispatch Batches to Ranked PCs</span>
-            <span style="color: var(--text-2);">→</span>
-            <span style="color: var(--violet);">Step 3: Return to Aggregator for Final Model</span>
-          </div>
-          <div class="panel-subtitle">
-            Feed text/JSONL/files here (`POST /feed`) — automatically split into batches, loaded across Ranked LAN machines, and aggregated back into one Final Model
+          <h1>How Your Distributed Training Works</h1>
+          <p>Follow the 3 simple stages below: Coordinator → Ranked LAN Machines → Aggregator Final Model</p>
+        </div>
+        <span class="subnet-tag" id="overallStatusTag">Status: Training Batches Across LAN</span>
+      </div>
+
+      <div class="flow-diagram">
+        <!-- BOX 1: COORDINATOR -->
+        <div class="flow-node coordinator">
+          <span class="node-step-tag">1. Coordinator System</span>
+          <h3>Feed Data &amp; Split Batches</h3>
+          <p>Takes your dataset, scans the Wi-Fi/LAN for free computers, and sends batches to the highest-ranked ones.</p>
+          <div class="flow-node-stat" id="coordFlowStat">Dataset split into 3 Batches</div>
+        </div>
+
+        <!-- ARROW 1 -->
+        <div class="flow-arrow">
+          <span>Sends Batches</span>
+          <div class="arrow-line"><div class="arrow-dot"></div></div>
+          <span style="font-family: var(--font-mono); font-size: 0.7rem;">GET /work</span>
+        </div>
+
+        <!-- BOX 2: RANKED WORKERS -->
+        <div class="flow-node workers">
+          <span class="node-step-tag">2. Ranked LAN Computers</span>
+          <h3>Load Batch &amp; Train Locally</h3>
+          <p>Free PCs &amp; laptops train on their assigned batch using their GPU, Apple M-Series, or RAM.</p>
+          <div class="flow-node-stat" id="workerFlowStat">3 Free Computers Active (#1 → #3)</div>
+        </div>
+
+        <!-- ARROW 2 -->
+        <div class="flow-arrow">
+          <span>Returns Updates</span>
+          <div class="arrow-line"><div class="arrow-dot" style="background: var(--purple);"></div></div>
+          <span style="font-family: var(--font-mono); font-size: 0.7rem;">POST /gradients</span>
+        </div>
+
+        <!-- BOX 3: AGGREGATOR -->
+        <div class="flow-node aggregator">
+          <span class="node-step-tag">3. Aggregator System</span>
+          <h3>Merge Into One Final Model</h3>
+          <p>Collects trained updates from all machines and combines them into one unified <code>.pt</code> model file.</p>
+          <div class="flow-node-stat" id="aggFlowStat">Final Model: model_v42.pt</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3-COLUMN WORKSPACE MATCHING THE 3 SYSTEMS -->
+    <section class="workspace-grid">
+
+      <!-- ================================================================= -->
+      <!-- COLUMN 1: THE COORDINATOR (FEED DATA & CREATE BATCHES)            -->
+      <!-- ================================================================= -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2>
+              <span class="step-circle" style="background: var(--blue);">1</span>
+              <span>Coordinator</span>
+            </h2>
+            <p>Feed your data here to split &amp; send to machines</p>
           </div>
         </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-          <button class="mini-btn" onclick="loadSampleCorpus('llm')">Preset: LLM Instruction Corpus</button>
-          <button class="mini-btn" onclick="loadSampleCorpus('medical')">Preset: Medical QA Dataset</button>
-          <button class="mini-btn" onclick="loadSampleCorpus('code')">Preset: Python Code Shards</button>
+
+        <label class="label">Training Data (Paste text, JSONL, or upload a file)</label>
+        <textarea class="textarea" id="dataInput">{"prompt": "Explain how atharva.ai trains one model across multiple laptops.", "response": "The Coordinator splits training data into batches, sends them to top-ranked free laptops on the LAN, and the Aggregator merges their trained updates into one final model."}</textarea>
+
+        <div class="input-row">
+          <div style="flex: 1;">
+            <label class="label">Number of Batches</label>
+            <select class="select" id="batchCountSelect">
+              <option value="3" selected>3 Batches (1 per machine)</option>
+              <option value="6">6 Batches</option>
+              <option value="9">9 Batches</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label class="label">Upload File</label>
+            <input type="file" class="input" id="fileInput" accept=".txt,.jsonl,.csv,.md" style="padding: 5px;" />
+          </div>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%; justify-content: center;" id="feedBtn">
+          ▶ Feed Data &amp; Send Batches to Workers
+        </button>
+
+        <div style="margin-top: 18px;">
+          <label class="label">Coordinator Batch Queue</label>
+          <div class="batch-list" id="coordinatorBatchList"></div>
         </div>
       </div>
 
-      <div class="feeder-grid">
-        <!-- Left: Input Data Feeder -->
-        <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-1);">
-            <span>Input Training Corpus / JSONL / Raw Text</span>
-            <label style="color: var(--cyan); cursor: pointer;">
-              📂 Upload File (.txt/.jsonl/.csv)
-              <input type="file" id="feedFileInput" style="display: none;" accept=".txt,.jsonl,.json,.csv,.md" />
-            </label>
+      <!-- ================================================================= -->
+      <!-- COLUMN 2: RANKED LAN MACHINES (SCAN, RANK & TRAIN BATCHES)        -->
+      <!-- ================================================================= -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2>
+              <span class="step-circle" style="background: var(--green);">2</span>
+              <span>Ranked LAN Devices (Workers)</span>
+            </h2>
+            <p>Scanned on your network — ranked by free capacity (#1 is highest)</p>
           </div>
-          <textarea class="feed-textarea" id="feedTextInput">{"instruction": "Explain distributed local-SGD training across heterogeneous GPUs and TPUs.", "output": "Each ranked machine loads a data batch locally, runs inner AdamW steps, and returns a Top-1% FP16 sparse weight delta to the central aggregator to build one unified checkpoint."}
-{"instruction": "How does atharva.ai rank devices on the same network?", "output": "It broadcasts a UDP scan probe on port 49152, checks which devices are FREE, scores their free VRAM and RAM, and assigns batches in rank order."}</textarea>
-
-          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between;">
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-              <label style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--text-1);">
-                Split into:
-                <select class="ctrl-select" id="feedBatchCountSelect">
-                  <option value="4">4 Batches</option>
-                  <option value="6" selected>6 Batches</option>
-                  <option value="8">8 Batches</option>
-                  <option value="12">12 Batches</option>
-                </select>
-              </label>
-              <input type="text" id="feedDatasetName" value="atharva-custom-v1" style="background:#050811; border:1px solid var(--border); color:var(--text-0); padding:7px 10px; border-radius:8px; font-family:var(--font-mono); font-size:0.75rem; width:155px;" />
-            </div>
-
-            <button class="ctrl-btn primary" id="dispatchBatchesBtn">
-              🚀 Feed Data &amp; Dispatch Batches to Ranked Machines
-            </button>
-          </div>
+          <button class="small-btn" id="rescanInlineBtn">↻ Refresh Ranks</button>
         </div>
 
-        <!-- Right: Live Dispatched Batches & Aggregator Return Progress -->
-        <div style="display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; margin-bottom: 6px;">
-              <span id="batchQueueSummary" style="color: var(--cyan);">Active Dataset: atharva-custom-v1 (6 Batches Split Across Top Ranked PCs)</span>
-              <strong id="batchReturnCounter" style="color: var(--emerald);">Returned to Aggregator: 2 / 6 Batches</strong>
-            </div>
-            <div class="gauge-track" style="height: 9px; margin-bottom: 10px;">
-              <div class="gauge-fill" id="batchAggregateProgressBar" style="width: 33%; background: linear-gradient(90deg, var(--cyan), var(--emerald), var(--violet));"></div>
-            </div>
-
-            <div class="batch-pipeline-grid" id="batchPipelineGrid"></div>
-          </div>
-
-          <div class="final-model-banner" id="finalModelBanner">
-            <div>
-              <strong style="color: var(--emerald); display: block;" id="finalModelStatusTitle">
-                ✓ FINAL AGGREGATED MODEL: final_model_v42.pt
-              </strong>
-              <span style="color: var(--text-1); font-size: 0.72rem;" id="finalModelStatusSub">
-                All returned machine batches merged via step-weighted outer step (OUTER_LR=0.7)
-              </span>
-            </div>
-            <button class="ctrl-btn primary" id="downloadFinalModelBtn">
-              ⬇ Download Final Model (.pt)
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- MAIN INTERACTIVE GRID -->
-    <div class="main-grid">
-      <!-- LEFT: RANKED DEVICES LIVE LOADING & TRAINING -->
-      <div class="panel">
-        <div class="panel-head">
-          <div>
-            <div class="panel-title">
-              <span>Ranked LAN Devices — Live Model Loading &amp; Fragment Training</span>
-            </div>
-            <div class="panel-subtitle">
-              Automatically ranked by <code>compute_capacity_score()</code> (Free VRAM × 12 + Accel Bonus + Free RAM × 2.5 + Cores × 1.5) × Headroom
-            </div>
-          </div>
-          <span style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--cyan);" id="lastScanTime">
-            Last UDP Scan: Just now
-          </span>
-        </div>
-
-        <div class="device-list" id="deviceList"></div>
+        <div class="machine-list" id="machinesContainer"></div>
       </div>
 
-      <!-- RIGHT: SINGLE-MACHINE MODEL ASSEMBLY + LOSS CURVE + EVENT STREAM -->
-      <div class="right-stack">
-        <!-- SINGLE MACHINE LOADER & FRAGMENT MERGER -->
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-title">Single-Machine Model Assembly &amp; Live Loader</div>
-              <div class="panel-subtitle">
-                Fragments trained on Ranked PCs merge into one <code>model_v{N}.pt</code> loaded on Target Host
-              </div>
-            </div>
-            <span class="state-pill state-training" id="loaderBadge">READY TO LOAD</span>
-          </div>
-
-          <canvas id="assemblyCanvas"></canvas>
-
-          <div class="fragment-slots">
-            <div class="frag-slot">
-              <strong>Frag 0: Embed</strong>
-              <span id="slot0Host">Rank #1 · RTX 4090</span>
-            </div>
-            <div class="frag-slot">
-              <strong>Frag 1: Blocks 0–1</strong>
-              <span id="slot1Host">Rank #2 · M3 Max</span>
-            </div>
-            <div class="frag-slot">
-              <strong>Frag 2: Blocks 2–3</strong>
-              <span id="slot2Host">Rank #3 · TPU v5e</span>
-            </div>
-            <div class="frag-slot">
-              <strong>Frag 3: LM Head</strong>
-              <span id="slot3Host">Rank #4 · abhisek</span>
-            </div>
+      <!-- ================================================================= -->
+      <!-- COLUMN 3: THE AGGREGATOR (COLLECT UPDATES & BUILD FINAL MODEL)    -->
+      <!-- ================================================================= -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2>
+              <span class="step-circle" style="background: var(--purple);">3</span>
+              <span>Aggregator System</span>
+            </h2>
+            <p>Receives trained batches &amp; builds the final model</p>
           </div>
         </div>
 
-        <!-- LIVE LOSS & CONVERGENCE CHART -->
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <div class="panel-title">Real-Time Global &amp; Per-Rank Loss Trajectory</div>
-              <div class="panel-subtitle">Step-weighted outer aggregation (OUTER_LR = 0.7, Top-1% FP16 + Error Feedback)</div>
-            </div>
-            <span style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--emerald);" id="pendingDeltasBadge">
-              round:deltas = 2 buffered
-            </span>
+        <div class="agg-summary-box">
+          <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">
+            Trained Batches Returned to Aggregator
           </div>
-          <canvas id="lossCanvas"></canvas>
+          <div class="agg-big-number" id="aggProgressNumber">0 / 3</div>
+          <div class="progress-bar-bg" style="margin-top: 10px; background: #ddd6fe;">
+            <div class="progress-bar-fill" id="aggProgressBar" style="width: 0%; background: var(--purple);"></div>
+          </div>
         </div>
 
-        <!-- LIVE CLUSTER EVENT STREAM -->
-        <div class="panel">
-          <div class="panel-head">
-            <div class="panel-title">Live Coordinator &amp; LAN Scanner Event Stream</div>
-            <button class="mini-btn" id="clearLogsBtn">Clear</button>
-          </div>
-          <div class="log-stream" id="eventLog"></div>
+        <label class="label">Updates Received from Ranked Machines</label>
+        <div class="agg-returned-list" id="aggReturnedList"></div>
+
+        <div class="final-model-box" id="finalModelCard">
+          <h3 id="finalModelTitle">Final Model: model_v42.pt</h3>
+          <p id="finalModelDesc">All returned batches are merged into one model file ready to load on a single computer.</p>
+          <button class="btn btn-green" style="width: 100%; justify-content: center;" id="downloadModelBtn">
+            ⬇ Download Final Model (model_v42.pt)
+          </button>
         </div>
       </div>
-    </div>
+
+    </section>
   </main>
-
-  <!-- ADD CUSTOM PC / LAPTOP MODAL -->
-  <div class="modal-backdrop" id="addModal">
-    <div class="modal-card">
-      <h3 style="font-family: var(--font-display); margin-bottom: 14px;">Add LAN PC / Laptop to Network Scan</h3>
-      <div class="form-row">
-        <label>Hostname</label>
-        <input type="text" id="inpHost" value="lab-rtx4080-pc" />
-      </div>
-      <div class="form-row">
-        <label>LAN IPv4 Address</label>
-        <input type="text" id="inpIp" value="192.168.31.115" />
-      </div>
-      <div class="form-row">
-        <label>Compute Type</label>
-        <select id="inpType">
-          <option value="cuda">NVIDIA CUDA GPU</option>
-          <option value="tpu">Google Cloud TPU</option>
-          <option value="mps">Apple Silicon Unified Memory (MPS)</option>
-          <option value="cpu">CPU + System RAM Only</option>
-        </select>
-      </div>
-      <div class="form-row">
-        <label>Accelerator / CPU Model Name</label>
-        <input type="text" id="inpGpu" value="NVIDIA GeForce RTX 4080 Super" />
-      </div>
-      <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div>
-          <label>Free VRAM (GB)</label>
-          <input type="number" id="inpVram" value="14.8" step="0.5" />
-        </div>
-        <div>
-          <label>Free System RAM (GB)</label>
-          <input type="number" id="inpRam" value="28.0" step="1" />
-        </div>
-      </div>
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
-        <button class="ctrl-btn" id="closeModalBtn">Cancel</button>
-        <button class="ctrl-btn primary" id="confirmAddNodeBtn">Add &amp; Rank Device</button>
-      </div>
-    </div>
-  </div>
 
   <script>
     // =========================================================================
-    // CLUSTER STATE & CAPACITY RANKING ENGINE (Matches shared/schemas.py)
+    // STATE: REAL LAN DEVICES + COORDINATOR BATCHES + AGGREGATOR
     // =========================================================================
-    let paused = false;
     let modelVersion = 42;
-    let topKCutoff = 4;
-    let bufferedDeltas = 2;
-    let globalLoss = 1.942;
-    const lossHistory = [2.62, 2.51, 2.43, 2.34, 2.26, 2.19, 2.12, 2.06, 2.01, 1.97, 1.942];
-    const flyingPulses = []; // visual pulses in assemblyCanvas
-
-    const devices = [
+    let devices = [
       {
-        id: 'node-macbookair',
+        id: 'macbook-air',
         hostname: 'MacBookAir.lan',
         ip: '192.168.31.193',
-        devType: 'mps',
+        deviceType: 'mps',
         unifiedMemory: true,
-        gpuName: 'Apple M1/M-Series (Unified Memory)',
+        gpuName: 'Apple M1 (Unified Memory)',
         vramTotal: 0.0,
         vramFree: 0.0,
         ramTotal: 8.0,
@@ -1037,17 +837,14 @@
         cores: 8,
         loadPct: 8,
         isFree: true,
-        phase: 'TRAINING',
-        phaseProgress: 0.58,
-        shardId: 'shard_00041.npy',
-        localLoss: 1.894,
-        syncedVersion: 42
+        currentBatch: null,
+        progress: 0
       },
       {
-        id: 'node-abhisek',
+        id: 'abhisek-pc',
         hostname: 'abhisek (This PC)',
         ip: '192.168.31.182',
-        devType: 'cuda',
+        deviceType: 'cuda',
         unifiedMemory: false,
         gpuName: 'NVIDIA GeForce GTX 1650',
         vramTotal: 4.0,
@@ -1057,19 +854,16 @@
         cores: 8,
         loadPct: 32,
         isFree: true,
-        phase: 'TRAINING',
-        phaseProgress: 0.74,
-        shardId: 'shard_00042.npy',
-        localLoss: 1.918,
-        syncedVersion: 42
+        currentBatch: null,
+        progress: 0
       },
       {
-        id: 'node-hp-laptop',
+        id: 'hp-laptop',
         hostname: 'UI-5CG350652G.lan',
         ip: '192.168.31.102',
-        devType: 'cpu',
+        deviceType: 'cpu',
         unifiedMemory: false,
-        gpuName: 'Laptop / PC CPU (HP 5CG350652G)',
+        gpuName: 'Laptop CPU (8 Cores)',
         vramTotal: 0.0,
         vramFree: 0.0,
         ramTotal: 16.0,
@@ -1077,854 +871,373 @@
         cores: 8,
         loadPct: 18,
         isFree: true,
-        phase: 'LOADING',
-        phaseProgress: 0.42,
-        shardId: 'shard_00043.npy',
-        localLoss: 1.965,
-        syncedVersion: 42
+        currentBatch: null,
+        progress: 0
       }
     ];
 
-    function computeCapacityScore(d) {
+    let batches = [];
+
+    // Capacity scoring (matches shared/schemas.py — no unified memory double-counting)
+    function computeScore(d) {
       let raw = 0;
-      if (d.devType === 'mps' || d.unifiedMemory) {
-        // Unified memory pool on Apple Silicon: count free unified RAM once (do NOT double-count as VRAM + RAM)
+      if (d.deviceType === 'mps' || d.unifiedMemory) {
         raw = 25.0 + (d.ramFree * 8.0) + (d.cores * 1.5);
-      } else if (d.devType === 'cuda' || d.devType === 'tpu') {
+      } else if (d.deviceType === 'cuda' || d.deviceType === 'tpu') {
         raw = 50.0 + (d.vramFree * 12.0) + (d.ramFree * 2.5) + (d.cores * 1.5);
       } else {
         raw = (d.ramFree * 2.5) + (d.cores * 1.5);
       }
-      const headroom = Math.max(0.1, 1.0 - (Math.min(100, Math.max(0, d.loadPct)) / 100.0) * 0.7);
-      const availMult = d.isFree ? 1.0 : 0.15;
-      return +(raw * headroom * availMult).toFixed(1);
+      const headroom = Math.max(0.1, 1.0 - (d.loadPct / 100.0) * 0.7);
+      const mult = d.isFree ? 1.0 : 0.15;
+      return +(raw * headroom * mult).toFixed(1);
     }
 
-    function rankAllDevices() {
+    function rankDevices() {
       devices.forEach((d) => {
-        d.score = computeCapacityScore(d);
+        d.score = computeScore(d);
       });
       devices.sort((a, b) => {
         if (a.isFree !== b.isFree) return a.isFree ? -1 : 1;
         return b.score - a.score;
       });
-
-      let freeCounter = 0;
       devices.forEach((d, idx) => {
         d.rank = idx + 1;
-        if (d.isFree) freeCounter++;
-        d.selected = d.isFree && freeCounter <= topKCutoff;
-        if (!d.isFree) {
-          d.phase = 'BUSY';
-          d.batchSize = 0;
-          d.localSteps = 0;
-        } else if (!d.selected) {
-          d.phase = 'STANDBY';
-          d.batchSize = 0;
-          d.localSteps = 0;
-        } else {
-          if (d.phase === 'BUSY' || d.phase === 'STANDBY') {
-            d.phase = 'LOADING';
-            d.phaseProgress = 0.05;
-          }
-          if (d.score >= 250) {
-            d.batchSize = 16;
-            d.localSteps = 250;
-          } else if (d.score >= 85) {
-            d.batchSize = 8;
-            d.localSteps = 160;
-          } else {
-            d.batchSize = 4;
-            d.localSteps = 100;
-          }
-        }
       });
     }
 
-    function logEvent(tag, color, msg) {
-      const box = document.getElementById('eventLog');
-      const div = document.createElement('div');
-      div.className = 'log-entry';
-      const ts = new Date().toLocaleTimeString();
-      div.innerHTML = `<span style="color: var(--text-2);">[${ts}]</span> <strong style="color:${color};">[${tag}]</strong> ${msg}`;
-      box.prepend(div);
-      while (box.children.length > 35) {
-        box.removeChild(box.lastChild);
-      }
-    }
-
-    function renderDeviceCards() {
-      rankAllDevices();
-      const container = document.getElementById('deviceList');
-      container.innerHTML = '';
-
-      let activeCount = 0;
-      let freeCount = 0;
-      let busyCount = 0;
-      let pooledVram = 0;
-      let pooledRam = 0;
-
-      devices.forEach((d) => {
-        if (d.isFree) freeCount++;
-        else busyCount++;
-        if (d.selected) {
-          activeCount++;
-          if (!d.unifiedMemory && d.devType !== 'mps') {
-            pooledVram += d.vramFree;
-          }
-          pooledRam += d.ramFree;
-        }
-
-        let stateClass = 'state-standby';
-        let stateLabel = 'STANDBY (OUTRANKED)';
-        let barColor = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
-        let progressTitle = 'Waiting in reserve pool';
-
-        if (!d.isFree) {
-          stateClass = 'state-busy';
-          stateLabel = 'BUSY (HOST IN USE — SKIPPED)';
-          barColor = 'linear-gradient(90deg, #f43f5e, #fb7185)';
-          progressTitle = 'Excluded from training: high local GPU/CPU load';
-        } else if (d.selected) {
-          if (d.phase === 'LOADING') {
-            stateClass = 'state-loading';
-            stateLabel = `LOADING model_v${modelVersion}.pt`;
-            barColor = 'linear-gradient(90deg, #38bdf8, #00f0ff)';
-            progressTitle = `Downloading & loading weights into ${d.devType.toUpperCase()} memory (${Math.round(d.phaseProgress * 100)}%)`;
-          } else if (d.phase === 'TRAINING') {
-            stateClass = 'state-training';
-            const curStep = Math.floor(d.phaseProgress * d.localSteps);
-            stateLabel = `TRAINING ${d.shardId}`;
-            barColor = 'linear-gradient(90deg, #00f0ff, #10b981)';
-            progressTitle = `Inner AdamW Step ${curStep}/${d.localSteps} (bs=${d.batchSize}) · Local Loss: ${d.localLoss.toFixed(3)}`;
-          } else if (d.phase === 'UPLOADING') {
-            stateClass = 'state-uploading';
-            stateLabel = `UPLOADING TOP-1% FP16 Δ`;
-            barColor = 'linear-gradient(90deg, #a78bfa, #00f0ff)';
-            progressTitle = `Packing Top-1% sparse coordinates + saving 99% to self.residual (${Math.round(d.phaseProgress * 100)}%)`;
-          }
-        }
-
-        const vramPct = d.vramTotal > 0 ? Math.round(((d.vramTotal - d.vramFree) / d.vramTotal) * 100) : 0;
-        const ramPct = d.ramTotal > 0 ? Math.round(((d.ramTotal - d.ramFree) / d.ramTotal) * 100) : 40;
-
-        const card = document.createElement('div');
-        card.className = `device-card ${d.selected ? 'selected' : ''} ${!d.isFree ? 'busy' : ''}`;
-        card.innerHTML = `
-          <div class="device-top">
-            <div class="device-id-group">
-              <div class="rank-badge ${d.selected ? '' : 'skipped'}">#${d.rank}</div>
-              <div>
-                <div class="device-name">
-                  <span>${d.hostname}</span>
-                  <span class="device-ip">${d.ip}</span>
-                </div>
-                <div class="device-hw">${d.gpuName} · ${d.cores} CPU Cores</div>
-              </div>
-            </div>
-            <div class="device-badges">
-              <span class="score-pill">Score: <strong>${d.score}</strong></span>
-              <span class="state-pill ${stateClass}">${stateLabel}</span>
-            </div>
-          </div>
-
-          <div class="telemetry-row">
-            <div class="mini-gauge">
-              <div class="gauge-head">
-                <span>DISCRETE VRAM / HBM</span>
-                <strong style="color: var(--cyan);">${(d.unifiedMemory || d.devType === 'mps') ? 'Unified w/ RAM' : (d.vramTotal > 0 ? `${d.vramFree.toFixed(1)} / ${d.vramTotal} GB` : 'None (CPU)')}</strong>
-              </div>
-              <div class="gauge-track">
-                <div class="gauge-fill" style="width: ${(d.unifiedMemory || d.devType === 'mps') ? 100 : (d.vramTotal > 0 ? (d.vramFree / d.vramTotal) * 100 : 0)}%; background: var(--cyan);"></div>
-              </div>
-            </div>
-
-            <div class="mini-gauge">
-              <div class="gauge-head">
-                <span>${(d.unifiedMemory || d.devType === 'mps') ? 'FREE UNIFIED RAM' : 'FREE SYSTEM RAM'}</span>
-                <strong style="color: var(--emerald);">${d.ramFree.toFixed(1)} / ${d.ramTotal} GB${(d.unifiedMemory || d.devType === 'mps') ? ' (Uni)' : ''}</strong>
-              </div>
-              <div class="gauge-track">
-                <div class="gauge-fill" style="width: ${(d.ramFree / Math.max(1, d.ramTotal)) * 100}%; background: var(--emerald);"></div>
-              </div>
-            </div>
-
-            <div class="mini-gauge">
-              <div class="gauge-head">
-                <span>DEVICE LOAD</span>
-                <strong style="color: ${d.loadPct > 80 ? 'var(--rose)' : 'var(--text-0)'};">${d.loadPct}% (${d.isFree ? 'FREE' : 'BUSY'})</strong>
-              </div>
-              <div class="gauge-track">
-                <div class="gauge-fill" style="width: ${d.loadPct}%; background: ${d.loadPct > 80 ? 'var(--rose)' : 'var(--violet)'};"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="job-progress-box">
-            <div class="job-progress-meta">
-              <span>${progressTitle}</span>
-              <span style="color: var(--cyan);">${d.selected ? `Checkpoint v${d.syncedVersion}` : 'Idle'}</span>
-            </div>
-            <div class="job-track">
-              <div class="job-fill" style="width: ${d.selected ? Math.round(d.phaseProgress * 100) : 0}%; background: ${barColor};"></div>
-            </div>
-          </div>
-
-          <div class="card-actions">
-            <span>Assigned Tier: ${d.selected ? `batch_size=${d.batchSize}, local_steps=${d.localSteps}` : 'None (Not in active ranks)'}</span>
-            <div style="display: flex; gap: 6px;">
-              <button class="mini-btn" onclick="toggleDeviceFree('${d.id}')">
-                ${d.isFree ? 'Mark Busy' : 'Mark Free'}
-              </button>
-              <button class="mini-btn" onclick="forceReloadNode('${d.id}')">
-                Reload Weights
-              </button>
-            </div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-
-      // Update KPI cards
-      document.getElementById('kpiNodes').textContent = `${activeCount} / ${devices.length} Active`;
-      document.getElementById('kpiSkipped').textContent = `${freeCount - activeCount} Standby · ${busyCount} Busy Skipped`;
-      document.getElementById('kpiFreeVram').textContent = `${pooledVram.toFixed(1)} GB`;
-      document.getElementById('kpiFreeRam').textContent = `${pooledRam.toFixed(1)} GB`;
-
-      // Update Fragment Slot Labels for top 4 selected nodes
-      const selectedNodes = devices.filter((d) => d.selected);
-      for (let i = 0; i < 4; i++) {
-        const el = document.getElementById(`slot${i}Host`);
-        if (el) {
-          el.textContent = selectedNodes[i]
-            ? `Rank #${selectedNodes[i].rank} · ${selectedNodes[i].hostname.split(' ')[0]}`
-            : 'Unassigned';
-        }
-      }
-    }
-
-    window.toggleDeviceFree = function(id) {
-      const dev = devices.find((x) => x.id === id);
-      if (!dev) return;
-      dev.isFree = !dev.isFree;
-      dev.loadPct = dev.isFree ? 14 : 93;
-      dev.vramFree = dev.isFree ? Math.max(2.5, +(dev.vramTotal * 0.85).toFixed(1)) : +(dev.vramTotal * 0.1).toFixed(1);
-      renderDeviceCards();
-      logEvent(
-        'RANKER',
-        dev.isFree ? '#10b981' : '#f43f5e',
-        `${dev.hostname} (${dev.ip}) marked ${dev.isFree ? 'FREE' : 'BUSY'} -> new Rank #${dev.rank} (Score=${dev.score})`
-      );
-    };
-
-    window.forceReloadNode = function(id) {
-      const dev = devices.find((x) => x.id === id);
-      if (!dev || !dev.isFree) return;
-      dev.phase = 'LOADING';
-      dev.phaseProgress = 0.0;
-      dev.syncedVersion = modelVersion;
-      renderDeviceCards();
-      logEvent('LOADER', '#38bdf8', `${dev.hostname} pulling unified checkpoint model_v${modelVersion}.pt`);
-    };
-
-    // =========================================================================
-    // SIMULATION TICK: ADVANCE LOADING -> TRAINING -> UPLOADING -> MERGE
-    // =========================================================================
-    function triggerGlobalMerge() {
-      modelVersion++;
-      bufferedDeltas = 0;
-      globalLoss = Math.max(1.15, +(globalLoss - (0.025 + Math.random() * 0.02)).toFixed(3));
-      lossHistory.push(globalLoss);
-      if (lossHistory.length > 24) lossHistory.shift();
-
-      document.getElementById('kpiVersion').textContent = `model_v${modelVersion}.pt`;
-      document.getElementById('kpiLoss').textContent = globalLoss.toFixed(3);
-      document.getElementById('pendingDeltasBadge').textContent = `round:deltas = 0 buffered (Just Merged!)`;
-
-      // Put active nodes into LOADING state to pull new model_v{N}.pt
-      devices.forEach((d) => {
-        if (d.selected) {
-          d.phase = 'LOADING';
-          d.phaseProgress = 0.05;
-          d.syncedVersion = modelVersion;
-        }
-      });
-
-      logEvent(
-        'AGGREGATOR',
-        '#a78bfa',
-        `Merged sparse deltas -> wrote model_v${modelVersion}.pt (loss=${globalLoss.toFixed(3)}) & loaded onto Single Host`
-      );
-      drawLossChart();
-    }
-
-    setInterval(() => {
-      if (paused) return;
-      devices.forEach((d, idx) => {
-        if (!d.selected) return;
-        const speed = d.score >= 250 ? 0.075 : (d.score >= 90 ? 0.055 : 0.04);
-
-        if (d.phase === 'LOADING') {
-          d.phaseProgress += speed * 1.6;
-          if (d.phaseProgress >= 1) {
-            d.phase = 'TRAINING';
-            d.phaseProgress = 0;
-            d.syncedVersion = modelVersion;
-            logEvent('SYNC', '#38bdf8', `Rank #${d.rank} (${d.hostname}) loaded model_v${modelVersion}.pt -> training ${d.shardId}`);
-          }
-        } else if (d.phase === 'TRAINING') {
-          d.phaseProgress += speed;
-          d.localLoss = Math.max(1.12, +(d.localLoss - 0.002).toFixed(3));
-          if (d.phaseProgress >= 1) {
-            d.phase = 'UPLOADING';
-            d.phaseProgress = 0;
-          }
-        } else if (d.phase === 'UPLOADING') {
-          d.phaseProgress += speed * 2.1;
-          if (d.phaseProgress >= 1) {
-            d.phase = 'TRAINING';
-            d.phaseProgress = 0;
-            const nextShardNum = 45 + Math.floor(Math.random() * 50);
-            d.shardId = `shard_000${nextShardNum}.npy`;
-            bufferedDeltas++;
-            document.getElementById('pendingDeltasBadge').textContent = `round:deltas = ${bufferedDeltas} buffered`;
-
-            // Spawn visual particle pulse on assembly canvas
-            flyingPulses.push({ rankIdx: idx % 4, t: 0, color: '#00f0ff' });
-
-            logEvent(
-              'DELTA',
-              '#10b981',
-              `Rank #${d.rank} (${d.hostname}) uploaded Top-1% FP16 delta (${d.localSteps} steps, loss=${d.localLoss.toFixed(3)})`
-            );
-
-            if (bufferedDeltas >= 4) {
-              triggerGlobalMerge();
-            }
-          }
-        }
-      });
-
-      renderDeviceCards();
-    }, 450);
-
-    // =========================================================================
-    // CANVAS 1: SINGLE-MACHINE FRAGMENT ASSEMBLY VISUALIZER
-    // =========================================================================
-    const asmCanvas = document.getElementById('assemblyCanvas');
-    const aCtx = asmCanvas.getContext('2d');
-
-    function resizeAsm() {
-      const dpr = window.devicePixelRatio || 1;
-      const r = asmCanvas.getBoundingClientRect();
-      asmCanvas.width = r.width * dpr;
-      asmCanvas.height = r.height * dpr;
-      aCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    window.addEventListener('resize', resizeAsm);
-    resizeAsm();
-
-    function renderAssembly() {
-      const W = asmCanvas.clientWidth;
-      const H = asmCanvas.clientHeight;
-      aCtx.clearRect(0, 0, W, H);
-
-      const selected = devices.filter((d) => d.selected).slice(0, 4);
-      const leftX = 95;
-      const rightX = W - 125;
-      const centerY = H * 0.5;
-
-      // Draw 4 ranked worker source nodes on left
-      selected.forEach((d, i) => {
-        const y = 38 + i * ((H - 60) / Math.max(1, selected.length - 1 || 1));
-        d._asmY = y;
-
-        // Curve to Single Target Machine on right
-        aCtx.save();
-        aCtx.beginPath();
-        aCtx.moveTo(leftX + 55, y);
-        const cpX = (leftX + rightX) * 0.5;
-        aCtx.bezierCurveTo(cpX, y, cpX, centerY, rightX - 75, centerY);
-        aCtx.strokeStyle = d.phase === 'UPLOADING' ? '#00f0ff' : 'rgba(148, 163, 184, 0.2)';
-        aCtx.lineWidth = d.phase === 'UPLOADING' ? 2.2 : 1.3;
-        aCtx.stroke();
-        aCtx.restore();
-
-        // Worker pill
-        aCtx.save();
-        aCtx.fillStyle = '#0c1326';
-        aCtx.strokeStyle = d.phase === 'TRAINING' ? '#10b981' : '#00f0ff';
-        aCtx.lineWidth = 1.4;
-        aCtx.beginPath();
-        aCtx.roundRect(14, y - 18, 138, 36, 8);
-        aCtx.fill();
-        aCtx.stroke();
-
-        aCtx.fillStyle = '#f8fafc';
-        aCtx.font = '600 11px "JetBrains Mono", monospace';
-        aCtx.fillText(`#${d.rank} ${d.hostname.slice(0, 11)}`, 22, y - 2);
-        aCtx.fillStyle = '#94a3b8';
-        aCtx.font = '9px "JetBrains Mono", monospace';
-        aCtx.fillText(`${d.phase} ${Math.round(d.phaseProgress * 100)}%`, 22, y + 11);
-        aCtx.restore();
-      });
-
-      // Draw Single Target Machine on right
-      aCtx.save();
-      const grad = aCtx.createRadialGradient(rightX, centerY, 8, rightX, centerY, 90);
-      grad.addColorStop(0, 'rgba(167, 139, 250, 0.28)');
-      grad.addColorStop(1, 'rgba(167, 139, 250, 0)');
-      aCtx.fillStyle = grad;
-      aCtx.beginPath();
-      aCtx.arc(rightX, centerY, 90, 0, Math.PI * 2);
-      aCtx.fill();
-
-      aCtx.fillStyle = '#0e1329';
-      aCtx.strokeStyle = '#a78bfa';
-      aCtx.lineWidth = 2;
-      aCtx.beginPath();
-      aCtx.roundRect(rightX - 75, centerY - 64, 150, 128, 14);
-      aCtx.fill();
-      aCtx.stroke();
-
-      aCtx.textAlign = 'center';
-      aCtx.fillStyle = '#a78bfa';
-      aCtx.font = '700 10px "JetBrains Mono", monospace';
-      aCtx.fillText('ONE TARGET MACHINE', rightX, centerY - 40);
-
-      aCtx.fillStyle = '#ffffff';
-      aCtx.font = '700 14px "Space Grotesk", sans-serif';
-      aCtx.fillText(`model_v${modelVersion}.pt`, rightX, centerY - 18);
-
-      aCtx.fillStyle = '#10b981';
-      aCtx.font = '10px "JetBrains Mono", monospace';
-      aCtx.fillText('torch.load() ACTIVE', rightX, centerY + 6);
-
-      // Progress ring / bars of assembled layers
-      const colors = ['#00f0ff', '#10b981', '#a78bfa', '#f59e0b'];
-      for (let k = 0; k < 4; k++) {
-        aCtx.fillStyle = colors[k];
-        aCtx.beginPath();
-        aCtx.roundRect(rightX - 56 + k * 29, centerY + 22, 24, 24, 5);
-        aCtx.fill();
-        aCtx.fillStyle = '#020617';
-        aCtx.font = '700 9px "JetBrains Mono", monospace';
-        aCtx.fillText(`F${k}`, rightX - 44 + k * 29, centerY + 37);
-      }
-      aCtx.restore();
-
-      // Animate flying pulses
-      for (let i = flyingPulses.length - 1; i >= 0; i--) {
-        const p = flyingPulses[i];
-        p.t += 0.035;
-        if (p.t >= 1) {
-          flyingPulses.splice(i, 1);
-          continue;
-        }
-        const src = selected[p.rankIdx] || selected[0];
-        if (!src) continue;
-        const sy = src._asmY || centerY;
-        const u = 1 - p.t;
-        const cpX = (leftX + rightX) * 0.5;
-        const x = u * u * u * (leftX + 55) + 3 * u * u * p.t * cpX + 3 * u * p.t * p.t * cpX + p.t * p.t * p.t * (rightX - 75);
-        const y = u * u * u * sy + 3 * u * u * p.t * sy + 3 * u * p.t * p.t * centerY + p.t * p.t * p.t * centerY;
-
-        aCtx.save();
-        aCtx.beginPath();
-        aCtx.arc(x, y, 5, 0, Math.PI * 2);
-        aCtx.fillStyle = '#00f0ff';
-        aCtx.shadowColor = '#00f0ff';
-        aCtx.shadowBlur = 12;
-        aCtx.fill();
-        aCtx.restore();
-      }
-
-      requestAnimationFrame(renderAssembly);
-    }
-    requestAnimationFrame(renderAssembly);
-
-    // =========================================================================
-    // CANVAS 2: LOSS CURVE CHART
-    // =========================================================================
-    const lossCanvas = document.getElementById('lossCanvas');
-    const lCtx = lossCanvas.getContext('2d');
-
-    function resizeLoss() {
-      const dpr = window.devicePixelRatio || 1;
-      const r = lossCanvas.getBoundingClientRect();
-      lossCanvas.width = r.width * dpr;
-      lossCanvas.height = r.height * dpr;
-      lCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawLossChart();
-    }
-    window.addEventListener('resize', resizeLoss);
-
-    function drawLossChart() {
-      const W = lossCanvas.clientWidth;
-      const H = lossCanvas.clientHeight;
-      lCtx.clearRect(0, 0, W, H);
-
-      const padL = 42, padR = 18, padT = 20, padB = 26;
-      const gW = W - padL - padR;
-      const gH = H - padT - padB;
-
-      // Grid lines
-      lCtx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
-      lCtx.lineWidth = 1;
-      for (let i = 0; i <= 3; i++) {
-        const y = padT + (gH / 3) * i;
-        lCtx.beginPath();
-        lCtx.moveTo(padL, y);
-        lCtx.lineTo(W - padR, y);
-        lCtx.stroke();
-
-        const val = (2.7 - i * 0.5).toFixed(1);
-        lCtx.fillStyle = '#64748b';
-        lCtx.font = '10px "JetBrains Mono", monospace';
-        lCtx.fillText(val, 10, y + 3);
-      }
-
-      if (lossHistory.length < 2) return;
-      lCtx.beginPath();
-      lossHistory.forEach((v, idx) => {
-        const x = padL + (idx / (lossHistory.length - 1)) * gW;
-        const norm = (v - 1.1) / (2.7 - 1.1);
-        const y = padT + gH * (1 - Math.max(0, Math.min(1, norm)));
-        if (idx === 0) lCtx.moveTo(x, y);
-        else lCtx.lineTo(x, y);
-      });
-      lCtx.strokeStyle = '#00f0ff';
-      lCtx.lineWidth = 2.4;
-      lCtx.stroke();
-
-      // Fill area under curve
-      lCtx.lineTo(padL + gW, padT + gH);
-      lCtx.lineTo(padL, padT + gH);
-      lCtx.closePath();
-      const fillGrad = lCtx.createLinearGradient(0, padT, 0, padT + gH);
-      fillGrad.addColorStop(0, 'rgba(0, 240, 255, 0.25)');
-      fillGrad.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
-      lCtx.fillStyle = fillGrad;
-      lCtx.fill();
-    }
-    setTimeout(resizeLoss, 50);
-
-    // =========================================================================
-    // TOP BAR CONTROLS & MODAL HANDLERS
-    // =========================================================================
-    document.getElementById('topKSelect').addEventListener('change', (e) => {
-      topKCutoff = parseInt(e.target.value, 10);
-      renderDeviceCards();
-      logEvent('SCHEDULER', '#00f0ff', `Updated active rank selection cutoff to Top-${topKCutoff} free devices`);
-    });
-
-    async function syncRealLanDevices() {
+    // Fetch real LAN devices from /api/scan
+    async function scanNetwork() {
       try {
         const res = await fetch('/api/scan');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!data.ranked_nodes || data.ranked_nodes.length === 0) return;
-        document.getElementById('subnetBadge').textContent = `LIVE CLUSTER · SUBNET ${data.subnet}`;
-        data.ranked_nodes.forEach((n, idx) => {
-          const existing = devices.find((d) => d.ip === n.ip_address || d.hostname.startsWith(n.hostname));
-          const loadVal = (n.device_type === 'cuda' || n.device_type === 'tpu' || n.device_type === 'mps')
-            ? n.gpu_load_pct : n.cpu_load_pct;
-          if (existing) {
-            existing.hostname = n.hostname;
-            existing.ip = n.ip_address;
-            existing.devType = n.device_type;
-            existing.unifiedMemory = Boolean(n.unified_memory || n.device_type === 'mps');
-            existing.gpuName = n.gpu_name;
-            existing.vramTotal = n.vram_total_gb;
-            existing.vramFree = n.vram_free_gb;
-            existing.ramTotal = n.ram_total_gb;
-            existing.ramFree = n.ram_free_gb;
-            existing.cores = n.cpu_cores;
-            existing.loadPct = Math.round(loadVal);
-          } else {
-            devices.push({
-              id: 'node-' + n.ip_address.replace(/\./g, '-'),
-              hostname: n.hostname,
-              ip: n.ip_address,
-              devType: n.device_type,
-              unifiedMemory: Boolean(n.unified_memory || n.device_type === 'mps'),
-              gpuName: n.gpu_name,
-              vramTotal: n.vram_total_gb,
-              vramFree: n.vram_free_gb,
-              ramTotal: n.ram_total_gb,
-              ramFree: n.ram_free_gb,
-              cores: n.cpu_cores,
-              loadPct: Math.round(loadVal),
-              isFree: n.is_free,
-              phase: 'TRAINING',
-              phaseProgress: 0.25 * ((idx % 3) + 1),
-              shardId: `shard_000${41 + idx}.npy`,
-              localLoss: 1.92,
-              syncedVersion: modelVersion
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('subnetLabel').textContent = `Network: ${data.subnet}`;
+          if (data.ranked_nodes && data.ranked_nodes.length > 0) {
+            data.ranked_nodes.forEach((n) => {
+              const existing = devices.find((d) => d.ip === n.ip_address);
+              const load = (n.device_type === 'cuda' || n.device_type === 'tpu' || n.device_type === 'mps')
+                ? n.gpu_load_pct : n.cpu_load_pct;
+              if (existing) {
+                existing.hostname = n.hostname;
+                existing.deviceType = n.device_type;
+                existing.unifiedMemory = Boolean(n.unified_memory || n.device_type === 'mps');
+                existing.gpuName = n.gpu_name;
+                existing.vramTotal = n.vram_total_gb;
+                existing.vramFree = n.vram_free_gb;
+                existing.ramTotal = n.ram_total_gb;
+                existing.ramFree = n.ram_free_gb;
+                existing.cores = n.cpu_cores;
+                existing.loadPct = Math.round(load);
+              } else {
+                devices.push({
+                  id: 'lan-' + n.ip_address,
+                  hostname: n.hostname,
+                  ip: n.ip_address,
+                  deviceType: n.device_type,
+                  unifiedMemory: Boolean(n.unified_memory || n.device_type === 'mps'),
+                  gpuName: n.gpu_name,
+                  vramTotal: n.vram_total_gb,
+                  vramFree: n.vram_free_gb,
+                  ramTotal: n.ram_total_gb,
+                  ramFree: n.ram_free_gb,
+                  cores: n.cpu_cores,
+                  loadPct: Math.round(load),
+                  isFree: n.is_free,
+                  currentBatch: null,
+                  progress: 0
+                });
+              }
             });
           }
-        });
-        document.getElementById('lastScanTime').textContent = `Last Real Scan: ${new Date().toLocaleTimeString()}`;
-        renderDeviceCards();
+        }
       } catch (_) {}
+      rankDevices();
+      renderAll();
     }
 
-    document.getElementById('scanLanBtn').addEventListener('click', async () => {
-      await syncRealLanDevices();
-      logEvent('SCANNER', '#00f0ff', `Swept 192.168.31.0/24 via ARP + UDP 49152 -> ranked ${devices.length} real LAN computers`);
-    });
-    syncRealLanDevices();
+    // Split input data into batches and assign to FREE ranked devices
+    function feedAndDispatchData() {
+      rankDevices();
+      const count = parseInt(document.getElementById('batchCountSelect').value, 10) || 3;
+      const text = document.getElementById('dataInput').value.trim() || 'Sample training data';
+      const tokensPerBatch = Math.max(128, Math.round((text.length * 3) / count));
 
-    document.getElementById('forceMergeBtn').addEventListener('click', () => {
-      triggerGlobalMerge();
-      renderDeviceCards();
-    });
+      batches = [];
+      for (let i = 1; i <= count; i++) {
+        batches.push({
+          id: i,
+          name: `Batch #${i}`,
+          tokens: tokensPerBatch,
+          status: 'QUEUED', // 'QUEUED' | 'TRAINING' | 'MERGED'
+          assignedHost: null,
+          assignedRank: null
+        });
+      }
 
-    document.getElementById('pauseBtn').addEventListener('click', (e) => {
-      paused = !paused;
-      e.target.textContent = paused ? '▶ Resume' : '⏸ Pause';
-      logEvent('CLUSTER', '#f59e0b', paused ? 'Paused cluster simulation' : 'Resumed cluster telemetry');
-    });
-
-    document.getElementById('clearLogsBtn').addEventListener('click', () => {
-      document.getElementById('eventLog').innerHTML = '';
-    });
-
-    const addModal = document.getElementById('addModal');
-    document.getElementById('addNodeModalBtn').addEventListener('click', () => addModal.classList.add('open'));
-    document.getElementById('closeModalBtn').addEventListener('click', () => addModal.classList.remove('open'));
-    document.getElementById('confirmAddNodeBtn').addEventListener('click', () => {
-      const hostname = document.getElementById('inpHost').value.trim() || 'lan-node';
-      const ip = document.getElementById('inpIp').value.trim() || '192.168.31.120';
-      const devType = document.getElementById('inpType').value;
-      const gpuName = document.getElementById('inpGpu').value.trim() || 'Accelerator';
-      const vramFree = parseFloat(document.getElementById('inpVram').value) || 0;
-      const ramFree = parseFloat(document.getElementById('inpRam').value) || 16;
-
-      devices.push({
-        id: 'node-' + Date.now(),
-        hostname,
-        ip,
-        devType,
-        gpuName,
-        vramTotal: vramFree > 0 ? Math.ceil(vramFree * 1.15) : 0,
-        vramFree,
-        ramTotal: Math.ceil(ramFree * 1.25),
-        ramFree,
-        cores: 16,
-        loadPct: 9,
-        isFree: true,
-        phase: 'LOADING',
-        phaseProgress: 0.1,
-        shardId: 'shard_00088.npy',
-        localLoss: globalLoss + 0.04,
-        syncedVersion: modelVersion
+      // Reset worker current batches
+      devices.forEach((d) => {
+        d.currentBatch = null;
+        d.progress = 0;
       });
-      addModal.classList.remove('open');
-      renderDeviceCards();
-      logEvent('SCANNER', '#10b981', `Discovered new LAN device ${hostname} (${ip}) -> ranked automatically!`);
-    });
 
-    // Initial boot logs
-    logEvent('SCANNER', '#00f0ff', 'UDP 49152 broadcast on 192.168.31.0/24 -> 6 PCs/laptops discovered (5 FREE, 1 BUSY)');
-    logEvent('RANKER', '#10b981', 'Selected Top 4 free devices by capacity: #1 rtx4090-rig, #2 macbook-m3-max, #3 tpu-node-02, #4 abhisek');
-    logEvent('LOADER', '#a78bfa', 'Unified model_v42.pt mounted on Single Target Host');
+      assignQueuedBatchesToFreeWorkers();
+      renderAll();
+    }
 
-    // =========================================================================
-    // DATA FEEDER -> DISTRIBUTED BATCH QUEUE -> AGGREGATOR FINAL MODEL PIPELINE
-    // =========================================================================
-    let activeDatasetName = 'atharva-custom-v1';
-    let fedBatches = [];
+    function assignQueuedBatchesToFreeWorkers() {
+      rankDevices();
+      const freeWorkers = devices.filter((d) => d.isFree && !d.currentBatch);
+      freeWorkers.forEach((worker) => {
+        const nextBatch = batches.find((b) => b.status === 'QUEUED');
+        if (nextBatch) {
+          nextBatch.status = 'TRAINING';
+          nextBatch.assignedHost = worker.hostname;
+          nextBatch.assignedRank = worker.rank;
+          worker.currentBatch = nextBatch.id;
+          worker.progress = 10;
+        }
+      });
+    }
 
-    const sampleCorpora = {
-      llm: `{"instruction": "Explain distributed local-SGD training across heterogeneous GPUs and TPUs.", "output": "Each ranked machine loads a data batch locally, runs inner AdamW steps, and returns a Top-1% FP16 sparse weight delta to the central aggregator to build one unified checkpoint."}\n{"instruction": "How does atharva.ai rank devices on the same network?", "output": "It broadcasts a UDP scan probe on port 49152, checks which devices are FREE, scores their free VRAM and RAM, and assigns batches in rank order."}`,
-      medical: `{"patient_query": "What are standard first-line diagnostics for acute chest pain?", "clinical_note": "12-lead ECG within 10 minutes, serial high-sensitivity cardiac troponins, and chest radiograph."}\n{"patient_query": "Summarize drug-interaction precautions for anticoagulants.", "clinical_note": "Monitor INR and renal function; avoid concomitant NSAIDs without gastroprotection."}`,
-      code: `def compress_state_delta(delta: dict) -> str:\n    # Top-1% sparsification + FP16 packing with error feedback residual\n    pass\n\ndef rank_devices(raw_nodes: list) -> list:\n    # Sort free LAN machines by capacity_score descending\n    pass`
+    window.toggleFreeStatus = function(deviceId) {
+      const dev = devices.find((d) => d.id === deviceId);
+      if (!dev) return;
+      dev.isFree = !dev.isFree;
+      dev.loadPct = dev.isFree ? 15 : 94;
+
+      // If marked busy while training a batch, return that batch to QUEUED so another free PC picks it up
+      if (!dev.isFree && dev.currentBatch) {
+        const b = batches.find((x) => x.id === dev.currentBatch);
+        if (b && b.status === 'TRAINING') {
+          b.status = 'QUEUED';
+          b.assignedHost = null;
+          b.assignedRank = null;
+        }
+        dev.currentBatch = null;
+        dev.progress = 0;
+      }
+
+      assignQueuedBatchesToFreeWorkers();
+      renderAll();
     };
 
-    window.loadSampleCorpus = function(kind) {
-      document.getElementById('feedTextInput').value = sampleCorpora[kind] || sampleCorpora.llm;
-      document.getElementById('feedDatasetName').value = `atharva-${kind}-corpus`;
-    };
+    // Advance training progress on active workers and return finished batches to Aggregator
+    setInterval(() => {
+      let changed = false;
+      devices.forEach((d) => {
+        if (!d.isFree || !d.currentBatch) return;
+        const stepSpeed = d.score >= 70 ? 18 : 12;
+        d.progress = Math.min(100, d.progress + stepSpeed);
+        changed = true;
 
-    document.getElementById('feedFileInput').addEventListener('change', (e) => {
+        if (d.progress >= 100) {
+          const finishedBatch = batches.find((b) => b.id === d.currentBatch);
+          if (finishedBatch) {
+            finishedBatch.status = 'MERGED';
+          }
+          d.currentBatch = null;
+          d.progress = 0;
+
+          // Check if all batches are now in the Aggregator
+          if (batches.length > 0 && batches.every((b) => b.status === 'MERGED')) {
+            modelVersion++;
+          } else {
+            assignQueuedBatchesToFreeWorkers();
+          }
+        }
+      });
+
+      if (changed) {
+        renderAll();
+      }
+    }, 900);
+
+    function renderAll() {
+      rankDevices();
+
+      // 1. Update Top Flow Bar stats
+      const freeDevices = devices.filter((d) => d.isFree);
+      const mergedBatches = batches.filter((b) => b.status === 'MERGED');
+      document.getElementById('coordFlowStat').textContent =
+        `Dataset split into ${batches.length} Batches`;
+      document.getElementById('workerFlowStat').textContent =
+        `${freeDevices.length} of ${devices.length} Computers Free & Ranked`;
+      document.getElementById('aggFlowStat').textContent =
+        `Final Model: model_v${modelVersion}.pt (${mergedBatches.length}/${batches.length} merged)`;
+
+      // 2. Render Column 1: Coordinator Batch List
+      const coordList = document.getElementById('coordinatorBatchList');
+      coordList.innerHTML = '';
+      batches.forEach((b) => {
+        const row = document.createElement('div');
+        row.className = 'batch-row';
+        let badgeClass = 'tag-queued';
+        let statusText = 'Queued in Coordinator';
+        if (b.status === 'TRAINING') {
+          badgeClass = 'tag-training';
+          statusText = `Training on Rank #${b.assignedRank} (${b.assignedHost})`;
+        } else if (b.status === 'MERGED') {
+          badgeClass = 'tag-done';
+          statusText = `✓ Sent to Aggregator`;
+        }
+        row.innerHTML = `
+          <div>
+            <strong>${b.name}</strong>
+            <span style="color: var(--text-muted); font-size: 0.75rem; margin-left: 6px;">(${b.tokens} tokens)</span>
+          </div>
+          <span class="batch-tag ${badgeClass}">${statusText}</span>
+        `;
+        coordList.appendChild(row);
+      });
+
+      // 3. Render Column 2: Ranked LAN Machines
+      const machContainer = document.getElementById('machinesContainer');
+      machContainer.innerHTML = '';
+      devices.forEach((d) => {
+        const activeBatch = batches.find((b) => b.id === d.currentBatch);
+        const card = document.createElement('div');
+        card.className = `machine-card ${d.isFree ? 'active-rank' : 'busy-machine'}`;
+
+        const vramText = (d.unifiedMemory || d.deviceType === 'mps')
+          ? 'Shared w/ RAM'
+          : (d.vramTotal > 0 ? `${d.vramFree.toFixed(1)} / ${d.vramTotal} GB` : 'None (CPU)');
+
+        const ramText = (d.unifiedMemory || d.deviceType === 'mps')
+          ? `${d.ramFree.toFixed(1)} / ${d.ramTotal} GB (Unified)`
+          : `${d.ramFree.toFixed(1)} / ${d.ramTotal} GB`;
+
+        let activityLabel = 'Idle — Ready for next batch';
+        if (!d.isFree) {
+          activityLabel = 'Skipped — Computer is Busy';
+        } else if (activeBatch) {
+          activityLabel = `Training ${activeBatch.name} (${d.progress}%)`;
+        }
+
+        card.innerHTML = `
+          <div class="machine-top">
+            <div class="machine-title">
+              <span class="rank-pill ${d.isFree ? '' : 'inactive'}">Rank #${d.rank}</span>
+              <span>${d.hostname}</span>
+              <span style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-muted); font-weight: 400;">(${d.ip})</span>
+            </div>
+            <span class="status-badge ${d.isFree ? 'status-free' : 'status-busy'}">
+              ${d.isFree ? 'FREE · SELECTED' : 'BUSY · SKIPPED'}
+            </span>
+          </div>
+
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;">
+            <strong>Hardware:</strong> ${d.gpuName} · <strong>Capacity Score:</strong> ${d.score}
+          </div>
+
+          <div class="machine-specs">
+            <div class="spec-box">
+              <span>Discrete VRAM</span>
+              <strong>${vramText}</strong>
+            </div>
+            <div class="spec-box">
+              <span>Free RAM</span>
+              <strong>${ramText}</strong>
+            </div>
+            <div class="spec-box">
+              <span>Current Load</span>
+              <strong>${d.loadPct}%</strong>
+            </div>
+          </div>
+
+          <div class="progress-wrap">
+            <div class="progress-label">
+              <span>${activityLabel}</span>
+              <span style="font-family: var(--font-mono);">${activeBatch ? d.progress + '%' : ''}</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width: ${activeBatch ? d.progress : 0}%; background: ${d.isFree ? 'var(--blue)' : 'var(--text-muted)'};"></div>
+            </div>
+          </div>
+
+          <div class="machine-footer">
+            <span>${d.isFree ? 'Chosen by Coordinator in Rank Order' : 'Excluded until free'}</span>
+            <button class="small-btn" onclick="toggleFreeStatus('${d.id}')">
+              ${d.isFree ? 'Simulate Busy' : 'Mark as Free'}
+            </button>
+          </div>
+        `;
+        machContainer.appendChild(card);
+      });
+
+      // 4. Render Column 3: Aggregator System
+      const totalB = batches.length || 1;
+      const doneB = mergedBatches.length;
+      const pct = Math.round((doneB / totalB) * 100);
+
+      document.getElementById('aggProgressNumber').textContent = `${doneB} / ${batches.length}`;
+      document.getElementById('aggProgressBar').style.width = `${pct}%`;
+
+      const retList = document.getElementById('aggReturnedList');
+      retList.innerHTML = '';
+      if (mergedBatches.length === 0) {
+        retList.innerHTML = `<div class="returned-item" style="color: var(--text-muted);">Waiting for workers to finish their current batch...</div>`;
+      } else {
+        mergedBatches.forEach((b) => {
+          const item = document.createElement('div');
+          item.className = 'returned-item';
+          item.innerHTML = `
+            <span><strong>${b.name}</strong> trained by <strong>${b.assignedHost || 'Worker'}</strong></span>
+            <span style="color: var(--green); font-weight: 700;">✓ Merged</span>
+          `;
+          retList.appendChild(item);
+        });
+      }
+
+      document.getElementById('finalModelTitle').textContent =
+        doneB === batches.length
+          ? `✓ Final Model Ready: model_v${modelVersion}.pt`
+          : `Building Final Model (model_v${modelVersion}.pt)...`;
+      document.getElementById('downloadModelBtn').textContent =
+        `⬇ Download Final Model (model_v${modelVersion}.pt)`;
+    }
+
+    // Event listeners
+    document.getElementById('feedBtn').addEventListener('click', feedAndDispatchData);
+    document.getElementById('scanBtn').addEventListener('click', scanNetwork);
+    document.getElementById('rescanInlineBtn').addEventListener('click', scanNetwork);
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      document.getElementById('feedDatasetName').value = file.name.replace(/\.[^.]+$/, '');
       const reader = new FileReader();
       reader.onload = (ev) => {
-        document.getElementById('feedTextInput').value = String(ev.target.result || '').slice(0, 8000);
-        logEvent('FEEDER', '#00f0ff', `Loaded file "${file.name}" (${file.size.toLocaleString()} bytes) into Main Interface Feeder`);
+        document.getElementById('dataInput').value = String(ev.target.result || '').slice(0, 5000);
+        feedAndDispatchData();
       };
       reader.readAsText(file);
     });
 
-    function createAndDispatchBatches(dsName, rawText, count) {
-      rankAllDevices();
-      activeDatasetName = dsName;
-      const selectedNodes = devices.filter((d) => d.selected);
-      const tokenEst = Math.max(512, rawText.length * 4);
-      const perBatchTokens = Math.round(tokenEst / count);
-
-      fedBatches = [];
-      for (let i = 0; i < count; i++) {
-        const assignedNode = selectedNodes.length > 0 ? selectedNodes[i % selectedNodes.length] : null;
-        const isImmediate = assignedNode && i < selectedNodes.length;
-        const batchId = `${dsName}_batch_${String(i + 1).padStart(2, '0')}.npy`;
-        fedBatches.push({
-          index: i + 1,
-          total: count,
-          batchId,
-          tokens: perBatchTokens,
-          status: isImmediate ? 'TRAINING' : 'QUEUED', // 'QUEUED' | 'TRAINING' | 'AGGREGATED'
-          assignedRank: assignedNode ? assignedNode.rank : null,
-          assignedHost: assignedNode ? assignedNode.hostname.split(' ')[0] : 'Waiting'
-        });
-
-        if (isImmediate) {
-          assignedNode.shardId = `${batchId} (Batch ${i + 1}/${count})`;
-          assignedNode.phase = 'LOADING';
-          assignedNode.phaseProgress = 0.1;
-        }
-      }
-
-      document.getElementById('finalModelStatusTitle').textContent =
-        `⏳ TRAINING IN PROGRESS: Collecting ${count} Batches into Aggregator...`;
-      document.getElementById('finalModelStatusTitle').style.color = 'var(--amber)';
-      document.getElementById('finalModelStatusSub').textContent =
-        `Dataset "${dsName}" (${tokenEst.toLocaleString()} tokens) split into ${count} batches across Top-${selectedNodes.length} ranked machines`;
-
-      logEvent(
-        'FEEDER',
-        '#00f0ff',
-        `Fed dataset "${dsName}" (${tokenEst.toLocaleString()} tokens) -> split into ${count} batches & dispatched to Ranked PCs`
-      );
-      renderBatchPipeline();
-      renderDeviceCards();
-    }
-
-    function renderBatchPipeline() {
-      const grid = document.getElementById('batchPipelineGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      const doneCount = fedBatches.filter((b) => b.status === 'AGGREGATED').length;
-      const total = fedBatches.length || 1;
-      const pct = Math.round((doneCount / total) * 100);
-
-      document.getElementById('batchQueueSummary').textContent =
-        `Active Dataset: ${activeDatasetName} (${total} Batches Dispatched Across Ranked PCs)`;
-      document.getElementById('batchReturnCounter').textContent =
-        `Returned to Aggregator: ${doneCount} / ${total} Batches (${pct}%)`;
-      document.getElementById('batchAggregateProgressBar').style.width = `${pct}%`;
-
-      fedBatches.forEach((b) => {
-        const div = document.createElement('div');
-        const cls = b.status === 'AGGREGATED' ? 'done' : (b.status === 'TRAINING' ? 'training' : 'queued');
-        div.className = `batch-chip ${cls}`;
-        const badgeColor = b.status === 'AGGREGATED' ? 'var(--emerald)' : (b.status === 'TRAINING' ? 'var(--cyan)' : 'var(--amber)');
-        div.innerHTML = `
-          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-            <strong style="color:var(--text-0);">Batch #${b.index}/${b.total}</strong>
-            <span style="color:${badgeColor}; font-weight:700;">${b.status}</span>
-          </div>
-          <div style="color:var(--text-1); font-size:0.68rem;">
-            ${b.status === 'AGGREGATED' ? `✓ Merged in Aggregator` : `Rank #${b.assignedRank} (${b.assignedHost})`}
-          </div>
-          <div style="color:var(--text-2); font-size:0.66rem; margin-top:2px;">
-            ${b.tokens.toLocaleString()} tokens · ${b.batchId.slice(0, 22)}
-          </div>
-        `;
-        grid.appendChild(div);
-      });
-    }
-
-    // Hook into periodic step progression to advance fedBatches from TRAINING -> AGGREGATED
-    setInterval(() => {
-      if (paused || fedBatches.length === 0) return;
-      const activeBatch = fedBatches.find((b) => b.status === 'TRAINING');
-      if (activeBatch && Math.random() < 0.35) {
-        activeBatch.status = 'AGGREGATED';
-        logEvent(
-          'BATCH-RETURN',
-          '#10b981',
-          `Batch #${activeBatch.index}/${activeBatch.total} trained on Rank #${activeBatch.assignedRank} (${activeBatch.assignedHost}) -> returned to Aggregator!`
-        );
-
-        // Promote next QUEUED batch onto a ranked machine
-        const nextQueued = fedBatches.find((b) => b.status === 'QUEUED');
-        const selectedNodes = devices.filter((d) => d.selected);
-        if (nextQueued && selectedNodes.length > 0) {
-          const targetNode = selectedNodes[nextQueued.index % selectedNodes.length];
-          nextQueued.status = 'TRAINING';
-          nextQueued.assignedRank = targetNode.rank;
-          nextQueued.assignedHost = targetNode.hostname.split(' ')[0];
-          targetNode.shardId = `${nextQueued.batchId} (Batch ${nextQueued.index}/${nextQueued.total})`;
-          targetNode.phase = 'TRAINING';
-          targetNode.phaseProgress = 0.15;
-        }
-
-        const allDone = fedBatches.every((b) => b.status === 'AGGREGATED');
-        if (allDone) {
-          triggerGlobalMerge();
-          document.getElementById('finalModelStatusTitle').textContent =
-            `🎉 ALL ${fedBatches.length} BATCHES AGGREGATED → FINAL MODEL READY: final_model_v${modelVersion}.pt`;
-          document.getElementById('finalModelStatusTitle').style.color = 'var(--emerald)';
-          document.getElementById('finalModelStatusSub').textContent =
-            `Dataset "${activeDatasetName}" fully trained across ranked machines & merged into final_model_v${modelVersion}.pt`;
-          logEvent(
-            'FINAL-MODEL',
-            '#a78bfa',
-            `All ${fedBatches.length} batches from "${activeDatasetName}" returned to Aggregator -> built final_model_v${modelVersion}.pt!`
-          );
-        }
-        renderBatchPipeline();
-      }
-    }, 1600);
-
-    document.getElementById('dispatchBatchesBtn').addEventListener('click', () => {
-      const dsName = document.getElementById('feedDatasetName').value.trim() || 'atharva-custom-v1';
-      const rawText = document.getElementById('feedTextInput').value.trim() || 'sample training text';
-      const count = parseInt(document.getElementById('feedBatchCountSelect').value, 10) || 6;
-      createAndDispatchBatches(dsName, rawText, count);
-    });
-
-    document.getElementById('downloadFinalModelBtn').addEventListener('click', () => {
-      const checkpointManifest = {
-        platform: 'atharva.ai',
-        version: '0.1.0',
-        checkpoint_file: `final_model_v${modelVersion}.pt`,
-        dataset_trained: activeDatasetName,
-        batches_aggregated: fedBatches.length,
-        final_global_loss: globalLoss,
-        outer_lr: 0.7,
-        compression: 'Top-1% FP16 + Error Feedback Residual',
-        contributing_ranked_nodes: devices.filter((d) => d.selected).map((d) => ({
+    document.getElementById('downloadModelBtn').addEventListener('click', () => {
+      const info = {
+        model_file: `model_v${modelVersion}.pt`,
+        batches_merged: batches.length,
+        ranked_workers_used: devices.filter((d) => d.isFree).map((d) => ({
           rank: d.rank,
           hostname: d.hostname,
           ip: d.ip,
-          accelerator: d.gpuName,
+          hardware: d.gpuName,
           capacity_score: d.score
         })),
-        timestamp: new Date().toISOString()
+        created_at: new Date().toISOString()
       };
-      const blob = new Blob([JSON.stringify(checkpointManifest, null, 2)], { type: 'application/octet-stream' });
+      const blob = new Blob([JSON.stringify(info, null, 2)], { type: 'application/octet-stream' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `final_model_v${modelVersion}.pt`;
+      a.download = `model_v${modelVersion}.pt`;
       a.click();
       URL.revokeObjectURL(url);
-      logEvent('DOWNLOAD', '#00f0ff', `Downloaded unified final model checkpoint final_model_v${modelVersion}.pt to this machine`);
     });
 
-    // Initialize default 6 batches on load
-    createAndDispatchBatches(
-      'atharva-custom-v1',
-      document.getElementById('feedTextInput').value,
-      6
-    );
-    renderDeviceCards();
+    // Boot
+    feedAndDispatchData();
+    scanNetwork();
   </script>
 </body>
 </html>
